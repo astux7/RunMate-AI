@@ -7,38 +7,45 @@ Responsibilities:
   - Generate beginner guidance text for STARTER runners
   - Return a CoachDecision
 
-This agent uses the LLM for the beginner guidance text and month resolution.
-The distance logic is enforced locally before the LLM call so it is always
-deterministic and independently testable.
+Zero LLM calls — everything here is pure Python / deterministic logic.
+This eliminates one full API call per run and makes the agent independently
+testable without any API key.
 """
 
-import json
-
-from google import genai
-from google.genai import types
+from calendar import month_name
+from datetime import date
 
 from agents.base_agent import BaseAgent
 from models.runner import RunnerLevel, RunnerProfile, CoachDecision
 
 
+# Beginner guidance template — no LLM needed for this
+_STARTER_GUIDANCE = (
+    "Welcome to your running journey! Starting with a 5K is the perfect first goal — "
+    "it's achievable, exciting, and gives you a real race-day experience. "
+    "parkrun is a fantastic free weekly 5K held every Saturday in parks near you — "
+    "friendly, timed, and welcoming to all paces including walking. "
+    "You've got this! 🏃"
+)
+
+_STARTER_GUIDANCE_WITH_DISTANCE = (
+    "Great choice setting a goal distance! Taking it step by step is the smartest approach. "
+    "parkrun is a brilliant free weekly 5K every Saturday — a perfect regular training run "
+    "as you build toward your target. You've got this! 🏃"
+)
+
+
 class CoachAgent(BaseAgent):
     """
-    Resolves search parameters and generates beginner guidance.
+    Resolves search parameters using pure Python — no LLM calls.
 
-    Parameters
-    ----------
-    client:
-        A configured ``google.genai.Client`` instance.
+    This agent is fully deterministic and testable without an API key.
     """
 
-    prompt_file = "coach_agent.txt"
+    prompt_file = ""  # No LLM prompt needed
 
     _COMMON_DISTANCES = ["5K", "10K", "Half Marathon", "Marathon"]
     _STARTER_DEFAULT = ["5K"]
-
-    def __init__(self, client: genai.Client) -> None:
-        super().__init__()
-        self._client = client
 
     def run(self, profile: RunnerProfile) -> CoachDecision:
         """
@@ -53,33 +60,21 @@ class CoachAgent(BaseAgent):
         -------
         CoachDecision
             Distances to search, months to search, optional beginner guidance.
+            All values are resolved deterministically — zero API calls made.
         """
         distances = self._resolve_distances(profile)
-        user_message = self._build_message(profile, distances)
-
-        config = types.GenerateContentConfig(
-            system_instruction=self._system_prompt,
-            temperature=0.3,
-        )
-
-        response = self._client.models.generate_content(
-            model=self._get_model(),
-            contents=user_message,
-            config=config,
-        )
-
-        raw = self._strip_fences(response.text)
-        data = json.loads(raw)
+        months = self._resolve_months(profile)
+        guidance = self._resolve_guidance(profile)
 
         return CoachDecision(
-            distances=distances,  # always use our locally resolved distances
-            months_to_search=data.get("months_to_search", []),
-            beginner_guidance=data.get("beginner_guidance"),
-            reasoning=data.get("reasoning", ""),
+            distances=distances,
+            months_to_search=months,
+            beginner_guidance=guidance,
+            reasoning=self._build_reasoning(profile, distances, months),
         )
 
     # ------------------------------------------------------------------
-    # Internal helpers
+    # Internal helpers — all pure Python
     # ------------------------------------------------------------------
 
     def _resolve_distances(self, profile: RunnerProfile) -> list[str]:
@@ -97,14 +92,40 @@ class CoachAgent(BaseAgent):
             return self._STARTER_DEFAULT
         return self._COMMON_DISTANCES
 
-    def _build_message(self, profile: RunnerProfile, distances: list[str]) -> str:
+    def _resolve_months(self, profile: RunnerProfile) -> list[str]:
+        """
+        Resolve months to search.
+
+        If the user supplied a month, use only that.
+        Otherwise return the next 3 calendar months from today.
+        """
+        if profile.month:
+            return [profile.month]
+
+        today = date.today()
+        months = []
+        for offset in range(3):
+            month_index = (today.month - 1 + offset) % 12 + 1
+            months.append(month_name[month_index])
+        return months
+
+    def _resolve_guidance(self, profile: RunnerProfile) -> str | None:
+        """Return beginner guidance text for STARTER runners only."""
+        if profile.level != RunnerLevel.STARTER:
+            return None
+        if profile.distance:
+            return _STARTER_GUIDANCE_WITH_DISTANCE
+        return _STARTER_GUIDANCE
+
+    def _build_reasoning(
+        self,
+        profile: RunnerProfile,
+        distances: list[str],
+        months: list[str],
+    ) -> str:
         return (
-            f"Runner profile:\n"
-            f"- Level: {profile.level.value}\n"
-            f"- Location: {profile.location}\n"
-            f"- Distance preference: {profile.distance or 'not specified'}\n"
-            f"- Month preference: {profile.month or 'not specified'}\n"
-            f"- Resolved distances to search: {', '.join(distances)}\n\n"
-            f"Please resolve the months to search and, if this is a STARTER runner, "
-            f"write the beginner guidance text. Return valid JSON only."
+            f"Level={profile.level.value}, "
+            f"distances={distances}, "
+            f"months={months} "
+            f"(resolved deterministically — no LLM call)"
         )

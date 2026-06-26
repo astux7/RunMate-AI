@@ -88,10 +88,12 @@ class RaceSearchTool(BaseTool):
         )
 
         try:
-            response = self._client.models.generate_content(
-                model=self._model,
-                contents=user_message,
-                config=config,
+            response = self._call_with_retry(
+                lambda: self._client.models.generate_content(
+                    model=self._model,
+                    contents=user_message,
+                    config=config,
+                )
             )
             raw = response.text.strip()
             # Strip accidental markdown fences

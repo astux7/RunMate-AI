@@ -87,10 +87,12 @@ class RecommendationAgent(BaseAgent):
             temperature=0.5,
         )
 
-        response = self._client.models.generate_content(
-            model=self._get_model(),
-            contents=user_message,
-            config=config,
+        response = self._call_with_retry(
+            lambda: self._client.models.generate_content(
+                model=self._get_model(),
+                contents=user_message,
+                config=config,
+            )
         )
 
         raw = self._strip_fences(response.text)
