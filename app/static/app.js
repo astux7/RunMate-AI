@@ -632,7 +632,7 @@ document.addEventListener('DOMContentLoaded', () => {
           urlBtn.style.padding = '4px 10px';
           urlBtn.style.fontSize = '11px';
           urlBtn.style.margin = '0'; // align inline
-          urlBtn.innerHTML = 'Link ↗';
+          urlBtn.innerHTML = 'Link';
           actionsWrapper.appendChild(urlBtn);
         }
 
@@ -715,7 +715,7 @@ document.addEventListener('DOMContentLoaded', () => {
           urlBtn.style.padding = '4px 10px';
           urlBtn.style.fontSize = '11px';
           urlBtn.style.margin = '0'; // align inline
-          urlBtn.innerHTML = 'Link ↗';
+          urlBtn.innerHTML = 'Link';
           actionsWrapper.appendChild(urlBtn);
         }
 
@@ -802,7 +802,7 @@ document.addEventListener('DOMContentLoaded', () => {
         a.className = 'rec-action-link';
         a.style.padding = '4px 10px';
         a.style.fontSize = '11px';
-        a.innerHTML = 'Link ↗';
+        a.innerHTML = 'Link';
         
         const mapBtn = document.createElement('button');
         mapBtn.type = 'button';
