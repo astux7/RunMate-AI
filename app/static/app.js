@@ -579,16 +579,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const nameSpan = document.createElement('span');
         nameSpan.className = 'rec-name';
-        nameSpan.textContent = race.name + " ";
-        
-        if (race.url) {
-          const moreLink = document.createElement('a');
-          moreLink.href = race.url;
-          moreLink.target = '_blank';
-          moreLink.className = 'rec-more-link';
-          moreLink.innerHTML = '(More ..)';
-          nameSpan.appendChild(moreLink);
-        }
+        nameSpan.textContent = race.name;
         
         titleArea.appendChild(rankSpan);
         titleArea.appendChild(nameSpan);
@@ -625,19 +616,36 @@ document.addEventListener('DOMContentLoaded', () => {
         metaHtml += `<span class="rec-meta-item">📍 ${race.location}</span>`;
         metaRow.innerHTML = metaHtml;
 
-        // Show on Map link
+        // Action buttons wrapper (push to the right)
+        const actionsWrapper = document.createElement('span');
+        actionsWrapper.className = 'rec-meta-item';
+        actionsWrapper.style.marginLeft = 'auto';
+        actionsWrapper.style.display = 'inline-flex';
+        actionsWrapper.style.gap = '8px';
+        actionsWrapper.style.alignItems = 'center';
+
+        if (race.url) {
+          const urlBtn = document.createElement('a');
+          urlBtn.href = race.url;
+          urlBtn.target = '_blank';
+          urlBtn.className = 'rec-action-link';
+          urlBtn.style.padding = '4px 10px';
+          urlBtn.style.fontSize = '11px';
+          urlBtn.style.margin = '0'; // align inline
+          urlBtn.innerHTML = 'Link ↗';
+          actionsWrapper.appendChild(urlBtn);
+        }
+
         const mapBtn = document.createElement('button');
         mapBtn.type = 'button';
         mapBtn.className = 'show-on-map-btn';
-        mapBtn.innerHTML = '📍 Show on Map';
+        mapBtn.style.padding = '4px 10px';
+        mapBtn.style.fontSize = '11px';
+        mapBtn.innerHTML = '📍 Map';
         mapBtn.addEventListener('click', () => focusMarker(race.name));
+        actionsWrapper.appendChild(mapBtn);
         
-        const mapItem = document.createElement('span');
-        mapItem.className = 'rec-meta-item';
-        mapItem.style.marginLeft = 'auto'; // Push map button to the right side if space permits
-        mapItem.appendChild(mapBtn);
-        
-        metaRow.appendChild(mapItem);
+        metaRow.appendChild(actionsWrapper);
         card.appendChild(metaRow);
         
         // Explanation (Simple paragraph text)
@@ -674,16 +682,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const name = document.createElement('h3');
         name.className = 'hist-name';
-        name.textContent = race.name + " ";
-        
-        if (race.url) {
-          const moreLink = document.createElement('a');
-          moreLink.href = race.url;
-          moreLink.target = '_blank';
-          moreLink.className = 'rec-more-link';
-          moreLink.innerHTML = '(More ..)';
-          name.appendChild(moreLink);
-        }
+        name.textContent = race.name;
         card.appendChild(name);
         
         // Horizontal Metadata Row (Top row below title)
@@ -700,19 +699,36 @@ document.addEventListener('DOMContentLoaded', () => {
         metaHtml += `<span class="rec-meta-item">📍 ${race.location}</span>`;
         metaRow.innerHTML = metaHtml;
 
-        // Show on Map link
+        // Action buttons wrapper (push to the right)
+        const actionsWrapper = document.createElement('span');
+        actionsWrapper.className = 'rec-meta-item';
+        actionsWrapper.style.marginLeft = 'auto';
+        actionsWrapper.style.display = 'inline-flex';
+        actionsWrapper.style.gap = '8px';
+        actionsWrapper.style.alignItems = 'center';
+
+        if (race.url) {
+          const urlBtn = document.createElement('a');
+          urlBtn.href = race.url;
+          urlBtn.target = '_blank';
+          urlBtn.className = 'rec-action-link';
+          urlBtn.style.padding = '4px 10px';
+          urlBtn.style.fontSize = '11px';
+          urlBtn.style.margin = '0'; // align inline
+          urlBtn.innerHTML = 'Link ↗';
+          actionsWrapper.appendChild(urlBtn);
+        }
+
         const mapBtn = document.createElement('button');
         mapBtn.type = 'button';
         mapBtn.className = 'show-on-map-btn';
-        mapBtn.innerHTML = '📍 Show on Map';
+        mapBtn.style.padding = '4px 10px';
+        mapBtn.style.fontSize = '11px';
+        mapBtn.innerHTML = '📍 Map';
         mapBtn.addEventListener('click', () => focusMarker(race.name));
+        actionsWrapper.appendChild(mapBtn);
         
-        const mapItem = document.createElement('span');
-        mapItem.className = 'rec-meta-item';
-        mapItem.style.marginLeft = 'auto'; // Push map button to the right side if space permits
-        mapItem.appendChild(mapBtn);
-        
-        metaRow.appendChild(mapItem);
+        metaRow.appendChild(actionsWrapper);
         card.appendChild(metaRow);
 
         // Description (Simple paragraph text)
