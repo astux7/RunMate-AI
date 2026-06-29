@@ -1,6 +1,6 @@
 # RunMate AI 🏃
 
-An AI-powered running companion that helps runners discover races appropriate to their experience level and location.
+An AI-powered running companion that helps runners discover races appropriate to their experience level and location. Now featuring a modern local web application.
 
 ## Features
 
@@ -8,7 +8,8 @@ An AI-powered running companion that helps runners discover races appropriate to
 - **Parkrun Fallback** — automatically searches for nearby Parkrun events when no official races are found
 - **AI Recommendations** — explains why each race suits you, with beginner-friendly guidance
 - **Multi-Agent Architecture** — Coach, Race Search, Recommendation, and Output agents work together
-- **Cloud-Ready** — business logic is decoupled from the CLI for future deployment
+- **Web Dashboard** — Interactive responsive layout with runner profile settings, search history, and live SSE progress streaming
+- **Cloud-Ready** — business logic is decoupled for both web interface and CLI usage
 
 ## Quick Start
 
@@ -31,7 +32,22 @@ cp .env.example .env
 
 Get a free Gemini API key at [aistudio.google.com](https://aistudio.google.com).
 
-### 3. Run
+### 3. Run the Web Application
+
+Start the FastAPI local server:
+
+```bash
+uvicorn app.main:app --reload
+```
+
+Open your browser at:
+[http://localhost:8000](http://localhost:8000)
+
+---
+
+### 4. Run the CLI Tool (Optional)
+
+You can also search directly from the terminal:
 
 ```bash
 # Starter runner in Leeds — will recommend 5K races and Parkruns
@@ -53,39 +69,53 @@ python runmate.py --level STARTER --location "Edinburgh" --save
 |---|---|---|
 | `--level` | ✅ | `STARTER` or `RUNNER` |
 | `--location` | ✅ | City/region, e.g. `"Leeds, United Kingdom"` |
-| `--distance` | ❌ | `5K`, `10K`, `Half Marathon`, `Marathon` |
-| `--month` | ❌ | Month name, e.g. `October`. Defaults to next 3 months |
+| `--distance` | ❌ | `5K`, `10K`, `Half Marathon`, `Marathon` (repeatable) |
+| `--month` | ❌ | Month name, e.g. `October`. Defaults to next 3 months (repeatable) |
 | `--save` | ❌ | Save the report to `output/` |
 
-## Architecture
+## Project Layout
 
 ```
-runmate.py              CLI entry point (Typer)
+runmate-agent/
 │
-├── agents/
-│   ├── coach_agent.py          Resolves distances & beginner guidance
-│   ├── race_search_agent.py    Finds races via tools
-│   ├── recommendation_agent.py Ranks & explains races with LLM
-│   └── output_agent.py         Rich terminal report rendering
+├── app/
+│   ├── api/
+│   │   └── search.py           REST API router for /api/search (SSE stream)
+│   │
+│   ├── services/
+│   │   └── pipeline_service.py Asynchronous worker orchestration service
+│   │
+│   ├── agent/                  Core RunMate agent logic
+│   │   ├── agents/             Coach, RaceSearch, Recommendation, Output agents
+│   │   ├── tools/              RaceSearch, Parkrun, LocalList, Fallback tools
+│   │   ├── models/             Runner profile and race data models
+│   │   ├── utils/              Retry logic and helper methods
+│   │   └── prompts/            Plain text agent system prompts
+│   │
+│   ├── templates/
+│   │   └── index.html          Main single-page HTML dashboard
+│   │
+│   ├── static/
+│   │   ├── style.css           Custom responsive design stylesheet
+│   │   └── app.js              FastAPI SSE connection client
+│   │
+│   └── main.py                 FastAPI server entry point
 │
-├── tools/
-│   ├── race_search_tool.py     Official race search (Gemini + Google Search)
-│   └── parkrun_tool.py         Parkrun fallback search
-│
-├── models/
-│   ├── runner.py               RunnerProfile, CoachDecision
-│   └── race.py                 Race, Recommendation, RunmateReport
-│
-└── prompts/                    Agent system prompts (plain text files)
+├── runmate.py                  CLI runner entry point
+├── .env.example                Environment variable template
+└── requirements.txt            Project dependency manifest
 ```
 
 ### Agent Flow
 
 ```
-1. CoachAgent       → Resolves distances to search + beginner guidance
-2. RaceSearchAgent  → Calls tools → falls back to Parkrun if needed
-3. RecommendationAgent → LLM ranks races + writes explanations
-4. OutputAgent      → Rich terminal report
+1. Client Form      → Gathers preferences (level, location, distances, months)
+2. FastAPI /search  → Establishes SSE stream connection
+3. CoachAgent       → Resolves target distances and beginner advice
+4. RaceSearchAgent  → Queries official races (Google Search Grounding)
+                    → Falls back to Parkruns or year-round historical events
+5. RecommenderAgent → Ranks races and generates explanation text
+6. Client JS        → Updates UI with beautiful responsive cards in real-time
 ```
 
 ## Configuration

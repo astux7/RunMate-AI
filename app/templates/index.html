@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RunMate AI — Personal Running Race Companion</title>
+  <!-- Google Fonts: Inter and Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <span class="brand-icon">🏃</span>
+          <h1>RunMate AI</h1>
+        </div>
+        <button class="close-sidebar-btn" id="closeSidebarBtn" aria-label="Close Sidebar">×</button>
+      </div>
+
+      <!-- Runner Profile Card (Placeholder Editable Data) -->
+      <div class="sidebar-section">
+        <h2 class="section-title">Runner Profile</h2>
+        <div class="profile-card">
+          <div class="profile-avatar">
+            <span class="avatar-emoji">🏃‍♂️</span>
+          </div>
+          <div class="profile-info">
+            <div class="profile-field">
+              <label for="profileName">Name</label>
+              <input type="text" id="profileName" value="Alex Smith" class="profile-input">
+            </div>
+            <div class="profile-field">
+              <label for="profileGoal">Running Goal</label>
+              <input type="text" id="profileGoal" value="Sub-4h Marathon" class="profile-input">
+            </div>
+            <div class="profile-field">
+              <label for="profileDistance">Weekly Distance</label>
+              <input type="text" id="profileDistance" value="45 km" class="profile-input">
+            </div>
+            <div class="profile-field">
+              <label for="profilePace">Preferred Pace</label>
+              <input type="text" id="profilePace" value="5:15 /km" class="profile-input">
+            </div>
+            <div class="profile-field">
+              <label for="profileUpcoming">Upcoming Target</label>
+              <input type="text" id="profileUpcoming" value="None scheduled" class="profile-input">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search History Section -->
+      <div class="sidebar-section history-section">
+        <div class="history-header">
+          <h2 class="section-title">Search History</h2>
+          <button class="clear-history-btn" id="clearHistoryBtn">Clear</button>
+        </div>
+        <div class="history-list" id="historyList">
+          <div class="empty-history-text">No recent searches</div>
+        </div>
+      </div>
+      
+      <div class="sidebar-footer">
+        <p class="footer-version">v1.0.0 • AI Studio Grounding</p>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Navbar for mobile -->
+      <header class="mobile-navbar">
+        <button class="menu-btn" id="menuBtn" aria-label="Toggle Menu">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <span class="navbar-title">RunMate AI</span>
+        <div style="width: 24px;"></div> <!-- Spacer -->
+      </header>
+
+      <!-- Welcome Banner -->
+      <section class="welcome-banner" id="welcomeBanner">
+        <div class="welcome-text">
+          <h1>Find your perfect running race.</h1>
+          <p>Tell RunMate your fitness level and target city. We'll search live race databases using Google Search grounding, check local weekly parkruns, and build a tailored training outline.</p>
+        </div>
+      </section>
+
+      <!-- Search Form Box -->
+      <section class="form-container">
+        <form id="searchForm" class="search-form">
+          <div class="form-grid">
+            <!-- Level Input -->
+            <div class="form-group level-group">
+              <label class="group-label">Experience Level</label>
+              <div class="level-selector">
+                <input type="radio" name="level" id="levelStarter" value="STARTER" checked>
+                <label for="levelStarter" class="level-label starter-label">
+                  <span class="bullet"></span>
+                  <span class="text">Starter</span>
+                </label>
+                
+                <input type="radio" name="level" id="levelRunner" value="RUNNER">
+                <label for="levelRunner" class="level-label runner-label">
+                  <span class="bullet"></span>
+                  <span class="text">Runner</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Location Input -->
+            <div class="form-group">
+              <label for="locationInput" class="group-label">Target Location</label>
+              <div class="input-wrapper location-wrapper">
+                <span class="input-icon">📍</span>
+                <input type="text" id="locationInput" placeholder="Leeds, United Kingdom" required autocomplete="off">
+              </div>
+            </div>
+
+            <!-- Distances Option -->
+            <div class="form-group">
+              <label class="group-label">Preferred Distances (Optional)</label>
+              <div class="chip-container" id="distanceChips">
+                <button type="button" class="chip" data-value="5K">5K</button>
+                <button type="button" class="chip" data-value="10K">10K</button>
+                <button type="button" class="chip" data-value="Half Marathon">Half Marathon</button>
+                <button type="button" class="chip" data-value="Marathon">Marathon</button>
+                <button type="button" class="chip" data-value="Ultra">Ultra</button>
+              </div>
+            </div>
+
+            <!-- Months Option -->
+            <div class="form-group">
+              <label class="group-label">Months to Search (Optional)</label>
+              <div class="chip-container scrollable-chips" id="monthChips">
+                <button type="button" class="chip" data-value="January">Jan</button>
+                <button type="button" class="chip" data-value="February">Feb</button>
+                <button type="button" class="chip" data-value="March">Mar</button>
+                <button type="button" class="chip" data-value="April">Apr</button>
+                <button type="button" class="chip" data-value="May">May</button>
+                <button type="button" class="chip" data-value="June">Jun</button>
+                <button type="button" class="chip" data-value="July">Jul</button>
+                <button type="button" class="chip" data-value="August">Aug</button>
+                <button type="button" class="chip" data-value="September">Sep</button>
+                <button type="button" class="chip" data-value="October">Oct</button>
+                <button type="button" class="chip" data-value="November">Nov</button>
+                <button type="button" class="chip" data-value="December">Dec</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Action Row -->
+          <div class="action-row">
+            <div class="grounding-toggle-container">
+              <input type="checkbox" id="groundingToggle" checked>
+              <label for="groundingToggle">Use Google Search Grounding</label>
+            </div>
+            <button type="submit" class="submit-btn" id="submitBtn">
+              <span class="btn-text">Let's find a race</span>
+              <span class="btn-icon">⚡</span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Status and Results Area -->
+      <section class="results-container" id="resultsContainer">
+        
+        <!-- SSE Loading State -->
+        <div class="loading-state card hidden" id="loadingState">
+          <div class="spinner-container">
+            <div class="runmate-spinner"></div>
+          </div>
+          <div class="status-box">
+            <h3 class="status-title" id="statusTitle">RunMate is thinking...</h3>
+            <p class="status-detail" id="statusDetail">Contacting agents</p>
+          </div>
+        </div>
+
+        <!-- Billing Depletion Panel -->
+        <div class="billing-error card hidden" id="billingError">
+          <div class="card-icon">💳</div>
+          <div class="card-content">
+            <h3 class="error-title">Gemini API Prepay Credits Depleted</h3>
+            <p class="error-message">Your Google AI Studio prepayment account has run out of funds. Please top up your billing balance to restore Google Search Grounding capabilities.</p>
+            <a href="https://aistudio.google.com/projects" target="_blank" class="action-btn error-btn">Manage Billing in AI Studio</a>
+          </div>
+        </div>
+
+        <!-- General Error Panel -->
+        <div class="general-error card hidden" id="generalError">
+          <div class="card-icon">⚠️</div>
+          <div class="card-content">
+            <h3 class="error-title">An Error Occurred</h3>
+            <p class="error-message" id="errorMessageText">Search failed. Please try again.</p>
+          </div>
+        </div>
+
+        <!-- Result Content (Report Output) -->
+        <div class="report-content hidden" id="reportContent">
+          <!-- Profile & Decision Summary -->
+          <div class="summary-cards">
+            <!-- Runner profile parameters -->
+            <div class="summary-card profile-summary-card">
+              <h3 class="card-title">Profile Settings</h3>
+              <div class="summary-details">
+                <div class="detail-row">
+                  <span class="detail-label">Experience Level</span>
+                  <span class="detail-val" id="resLevel">—</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Search Location</span>
+                  <span class="detail-val" id="resLocation">—</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Races Queried</span>
+                  <span class="detail-val" id="resDistances">—</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Months Searched</span>
+                  <span class="detail-val" id="resMonths">—</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Coach Guidance for Starter/Beginners -->
+            <div class="summary-card guidance-card hidden" id="resGuidanceCard">
+              <h3 class="card-title">💚 Beginner Guidance</h3>
+              <p class="guidance-text" id="resGuidanceText"></p>
+            </div>
+          </div>
+
+          <!-- Parkrun Fallback notice -->
+          <div class="parkrun-fallback-banner hidden" id="parkrunFallbackBanner">
+            <div class="banner-icon">📍</div>
+            <div class="banner-body">
+              <h4>Parkrun Fallback Triggered</h4>
+              <p>No official races were found for your search criteria. Showing local Parkrun events instead — free, weekly, timed 5K runs held every Saturday morning!</p>
+            </div>
+          </div>
+
+          <!-- Recommendations Listing -->
+          <div class="section-header" id="recommendationsHeader">
+            <h2>🏅 Recommended Races</h2>
+          </div>
+          <div class="recommendations-list" id="recommendationsList">
+            <!-- Recommended items dynamic insertion -->
+          </div>
+
+          <!-- Historical / Typical Races (North Korea fallback) -->
+          <div class="historical-section hidden" id="historicalSection">
+            <div class="historical-insight-card" id="historicalInsightCard">
+              <div class="insight-icon">🌍</div>
+              <div class="insight-body">
+                <h3 id="historicalInsightTitle">Running Landscape</h3>
+                <p id="historicalInsightText"></p>
+              </div>
+            </div>
+            
+            <div class="section-header">
+              <h2>📅 Races Typically Held Here</h2>
+              <p class="section-subtitle">These events are historically run in this region. Confirm dates with organizers directly.</p>
+            </div>
+            
+            <div class="historical-races-list" id="historicalRacesList">
+              <!-- Historical items dynamic insertion -->
+            </div>
+
+            <!-- Travel Tip Panel -->
+            <div class="travel-tip-card hidden" id="travelTipCard">
+              <div class="tip-icon">✈️</div>
+              <div class="tip-body">
+                <h3>Plan Your Trip</h3>
+                <p id="travelTipText"></p>
+                <div class="tip-subtitle">Adjust your travel dates to catch these events</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Local Parkrun Table (Free weekly 5k) -->
+          <div class="parkrun-section hidden" id="parkrunSection">
+            <div class="section-header">
+              <h2 id="parkrunTitle">🏃 parkrun Events</h2>
+              <p class="section-subtitle">All parkrun events are free. Register once at parkrun.org.uk</p>
+            </div>
+            <div class="table-container">
+              <table class="parkrun-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Event</th>
+                    <th>Start Time</th>
+                    <th>Website</th>
+                  </tr>
+                </thead>
+                <tbody id="parkrunTableBody">
+                  <!-- Parkrun rows dynamic insertion -->
+                </tbody>
+              </table>
+            </div>
+            <div class="parkrun-disclaimer">
+              All parkrun events require a one-time free registration barcode to be timed. Visit <a href="https://www.parkrun.org.uk/register/" target="_blank">parkrun.org.uk/register</a>.
+            </div>
+          </div>
+
+          <!-- Medical Disclaimer -->
+          <footer class="report-footer">
+            <hr>
+            <p class="disclaimer-text" id="resDisclaimer"></p>
+          </footer>
+        </div>
+
+      </section>
+    </main>
+  </div>
+
+  <!-- Client JavaScript -->
+  <script src="/static/app.js"></script>
+</body>
+</html>

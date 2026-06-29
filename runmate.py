@@ -28,7 +28,11 @@ Short flags:
 
 import os
 import sys
+from pathlib import Path
 from typing import Optional
+
+# Set up paths so agent components can import correctly from their new home
+sys.path.insert(0, str(Path(__file__).parent / "app" / "agent"))
 
 import typer
 from dotenv import load_dotenv
