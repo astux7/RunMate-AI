@@ -369,10 +369,10 @@ a:hover {
 /* Welcome Banner */
 .welcome-banner {
   background: linear-gradient(135deg, var(--bg-card), #0c2049);
-  border: 1px solid var(--border-color);
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
   border-radius: 16px;
   padding: 32px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 0 12px rgba(0, 191, 255, 0.15), 0 0 3px rgba(255, 255, 255, 0.25);
 }
 .welcome-text h1 {
   font-family: var(--font-family-display);
@@ -391,10 +391,10 @@ a:hover {
 /* Form Styling */
 .form-container {
   background-color: var(--bg-sidebar);
-  border: 1px solid var(--border-color);
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
   border-radius: 16px;
   padding: 28px;
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 0 15px rgba(0, 191, 255, 0.25), 0 0 4px rgba(255, 255, 255, 0.35);
 }
 
 .form-grid {
@@ -436,6 +436,7 @@ a:hover {
   transition: all var(--transition-speed);
   font-weight: 550;
   background-color: var(--bg-app);
+  color: var(--text-main);
 }
 .level-label .bullet {
   width: 14px;
@@ -485,13 +486,14 @@ a:hover {
   border-radius: 10px;
   font-size: 15px;
   background-color: var(--bg-app);
+  color: var(--text-main);
   transition: all var(--transition-speed);
 }
 .input-wrapper input:focus {
   outline: none;
   background-color: var(--bg-sidebar);
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+  box-shadow: 0 0 0 3px rgba(0, 240, 255, 0.15);
 }
 
 /* Chip Buttons Selector (Repeatable fields) */
@@ -507,6 +509,7 @@ a:hover {
   padding: 8px 16px;
   font-size: 13px;
   font-weight: 500;
+  color: var(--text-main);
   cursor: pointer;
   transition: all var(--transition-speed);
 }
@@ -514,9 +517,9 @@ a:hover {
   background-color: var(--bg-hover);
 }
 .chip.active {
-  background-color: var(--accent-blue-light);
-  border-color: var(--accent-blue);
-  color: var(--accent-blue-hover);
+  background-color: var(--accent-blue);
+  border-color: var(--border-focus);
+  color: #ffffff;
   font-weight: 600;
 }
 
