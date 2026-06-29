@@ -129,13 +129,13 @@ runmate-agent/
 
 ## Roadmap
 
+- [x] Web UI / REST API (FastAPI and JavaScript Dashboard)
+- [x] Interactive Event Map (Leaflet integration showing green/blue event markers)
 - [ ] Training plan generation
 - [ ] Strava integration
 - [ ] Garmin Connect integration
 - [ ] Weather-aware recommendations
 - [ ] Destination race suggestions (Abbott World Marathon Majors, Parkrun tourism)
-- [ ] REST API / Cloud Run deployment
-- [ ] Web UI
 
 ## Safety
 

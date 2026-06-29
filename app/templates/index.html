@@ -10,6 +10,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <!-- Stylesheet -->
   <link rel="stylesheet" href="/static/style.css">
+  <!-- Leaflet Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 </head>
 <body>
   <div class="app-container">
@@ -23,37 +25,7 @@
         <button class="close-sidebar-btn" id="closeSidebarBtn" aria-label="Close Sidebar">×</button>
       </div>
 
-      <!-- Runner Profile Card (Placeholder Editable Data) -->
-      <div class="sidebar-section">
-        <h2 class="section-title">Runner Profile</h2>
-        <div class="profile-card">
-          <div class="profile-avatar">
-            <span class="avatar-emoji">🏃‍♂️</span>
-          </div>
-          <div class="profile-info">
-            <div class="profile-field">
-              <label for="profileName">Name</label>
-              <input type="text" id="profileName" value="Alex Smith" class="profile-input">
-            </div>
-            <div class="profile-field">
-              <label for="profileGoal">Running Goal</label>
-              <input type="text" id="profileGoal" value="Sub-4h Marathon" class="profile-input">
-            </div>
-            <div class="profile-field">
-              <label for="profileDistance">Weekly Distance</label>
-              <input type="text" id="profileDistance" value="45 km" class="profile-input">
-            </div>
-            <div class="profile-field">
-              <label for="profilePace">Preferred Pace</label>
-              <input type="text" id="profilePace" value="5:15 /km" class="profile-input">
-            </div>
-            <div class="profile-field">
-              <label for="profileUpcoming">Upcoming Target</label>
-              <input type="text" id="profileUpcoming" value="None scheduled" class="profile-input">
-            </div>
-          </div>
-        </div>
-      </div>
+
 
       <!-- Search History Section -->
       <div class="sidebar-section history-section">
@@ -199,29 +171,6 @@
         <div class="report-content hidden" id="reportContent">
           <!-- Profile & Decision Summary -->
           <div class="summary-cards">
-            <!-- Runner profile parameters -->
-            <div class="summary-card profile-summary-card">
-              <h3 class="card-title">Profile Settings</h3>
-              <div class="summary-details">
-                <div class="detail-row">
-                  <span class="detail-label">Experience Level</span>
-                  <span class="detail-val" id="resLevel">—</span>
-                </div>
-                <div class="detail-row">
-                  <span class="detail-label">Search Location</span>
-                  <span class="detail-val" id="resLocation">—</span>
-                </div>
-                <div class="detail-row">
-                  <span class="detail-label">Races Queried</span>
-                  <span class="detail-val" id="resDistances">—</span>
-                </div>
-                <div class="detail-row">
-                  <span class="detail-label">Months Searched</span>
-                  <span class="detail-val" id="resMonths">—</span>
-                </div>
-              </div>
-            </div>
-
             <!-- Coach Guidance for Starter/Beginners -->
             <div class="summary-card guidance-card hidden" id="resGuidanceCard">
               <h3 class="card-title">💚 Beginner Guidance</h3>
@@ -235,6 +184,21 @@
             <div class="banner-body">
               <h4>Parkrun Fallback Triggered</h4>
               <p>No official races were found for your search criteria. Showing local Parkrun events instead — free, weekly, timed 5K runs held every Saturday morning!</p>
+            </div>
+          </div>
+
+          <!-- Live Event Map Container -->
+          <div class="map-section-wrapper" id="mapSectionWrapper">
+            <div class="section-header">
+              <h2>🗺️ Live Event Map</h2>
+            </div>
+            <div class="map-container-relative">
+              <div id="map" style="height: 350px; border-radius: 12px; border: 1.5px solid var(--border-color); box-shadow: 0 0 15px rgba(0, 191, 255, 0.1); margin-top: 10px; margin-bottom: 20px; z-index: 10;">
+                <div class="map-loader" id="mapLoader">
+                  <div class="map-spinner"></div>
+                  <span>Plotting events on map...</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -313,6 +277,8 @@
     </main>
   </div>
 
+  <!-- Leaflet Map JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <!-- Client JavaScript -->
   <script src="/static/app.js"></script>
 </body>

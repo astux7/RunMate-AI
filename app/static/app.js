@@ -22,6 +22,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const distanceChipsContainer = document.getElementById('distanceChips');
   const monthChipsContainer = document.getElementById('monthChips');
 
+  // Leaflet Map Globals
+  let mapInstance = null;
+  let markerGroup = null;
+  const geocodeCache = {};
+  const markerMap = {};
+
   // States
   const loadingState = document.getElementById('loadingState');
   const billingError = document.getElementById('billingError');
@@ -34,10 +40,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const statusDetail = document.getElementById('statusDetail');
   
   // Results details
-  const resLevel = document.getElementById('resLevel');
-  const resLocation = document.getElementById('resLocation');
-  const resDistances = document.getElementById('resDistances');
-  const resMonths = document.getElementById('resMonths');
   const resGuidanceCard = document.getElementById('resGuidanceCard');
   const resGuidanceText = document.getElementById('resGuidanceText');
   const parkrunFallbackBanner = document.getElementById('parkrunFallbackBanner');
@@ -281,12 +283,38 @@ document.addEventListener('DOMContentLoaded', () => {
     autocompleteSuggestions.innerHTML = '';
     autocompleteSuggestions.classList.remove('hidden');
 
+    const seenLabels = new Set();
+
     places.forEach(place => {
-      const city = place.address.city || place.address.town || place.address.municipality || place.address.village;
-      const country = place.address.country || place.display_name;
+      const addr = place.address || {};
+      const city = addr.city || addr.town || addr.city_district || addr.suburb || addr.municipality || addr.village || addr.hamlet;
+      const county = addr.county || addr.state_district;
+      const state = addr.state;
+      let country = addr.country || place.display_name;
+      
       if (!country) return;
 
-      const label = city ? `${city}, ${country}` : country;
+      // Shorten common countries
+      if (country === 'United Kingdom') country = 'UK';
+      if (country === 'United States' || country === 'United States of America') country = 'USA';
+
+      // Build a clean, clarified label parts list (e.g. York, City of York, UK)
+      const labelParts = [];
+      if (city) labelParts.push(city);
+      
+      if (county && county !== city && county !== country) {
+        labelParts.push(county);
+      } else if (state && state !== city && state !== country) {
+        labelParts.push(state);
+      }
+      
+      if (country) labelParts.push(country);
+
+      const label = labelParts.join(', ');
+
+      // De-duplicate matching labels
+      if (seenLabels.has(label)) return;
+      seenLabels.add(label);
 
       const item = document.createElement('div');
       item.className = 'autocomplete-suggestion';
@@ -509,15 +537,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // 9. Render Report Output HTML with Upgraded Styling & Shorter URLs
   function renderReport(report) {
     reportContent.classList.remove('hidden');
+    initAndPlotMap(report);
 
     const p = report.profile;
     const cd = report.coach_decision;
-    
-    resLevel.textContent = p.level;
-    resLevel.className = `detail-val ${p.level.toLowerCase() === 'starter' ? 'starter-badge' : 'runner-badge'}`;
-    resLocation.textContent = p.location;
-    resDistances.textContent = cd.distances.join(', ');
-    resMonths.textContent = cd.months_to_search.join(', ') || 'Next 3 months';
 
     // Show Beginner Guidance
     if (cd.beginner_guidance) {
@@ -556,47 +579,72 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const nameSpan = document.createElement('span');
         nameSpan.className = 'rec-name';
-        nameSpan.textContent = race.name;
+        nameSpan.textContent = race.name + " ";
+        
+        if (race.url) {
+          const moreLink = document.createElement('a');
+          moreLink.href = race.url;
+          moreLink.target = '_blank';
+          moreLink.className = 'rec-more-link';
+          moreLink.innerHTML = '(More ..)';
+          nameSpan.appendChild(moreLink);
+        }
         
         titleArea.appendChild(rankSpan);
         titleArea.appendChild(nameSpan);
         
         if (race.is_parkrun) {
           const tag = document.createElement('span');
-          tag.className = 'rec-tag';
+          tag.className = 'badge-parkrun';
           tag.textContent = 'Parkrun';
+          tag.style.marginLeft = '8px';
+          
+          const freeTag = document.createElement('span');
+          freeTag.className = 'badge-free';
+          freeTag.textContent = 'Free';
+          freeTag.style.marginLeft = '6px';
+          
           titleArea.appendChild(tag);
+          titleArea.appendChild(freeTag);
         }
         
         header.appendChild(titleArea);
         card.appendChild(header);
         
-        // Details Grid
-        const grid = document.createElement('div');
-        grid.className = 'rec-details-grid';
+        // Horizontal Metadata Row (Top row below title)
+        const metaRow = document.createElement('div');
+        metaRow.className = 'rec-meta-row';
         
+        let metaHtml = '';
         if (race.date) {
-          grid.appendChild(createDetailItem('📅', 'Date:', race.date));
+          metaHtml += `<span class="rec-meta-item">📅 ${race.date}</span>`;
         }
-        grid.appendChild(createDetailItem('📍', 'Location:', race.location));
-        grid.appendChild(createDetailItem('🏃', 'Distance:', race.distance));
+        if (metaHtml) metaHtml += ` <span class="rec-meta-divider">|</span> `;
+        metaHtml += `<span class="rec-meta-item">🏃 ${race.distance}</span>`;
+        metaHtml += ` <span class="rec-meta-divider">|</span> `;
+        metaHtml += `<span class="rec-meta-item">📍 ${race.location}</span>`;
+        metaRow.innerHTML = metaHtml;
+
+        // Show on Map link
+        const mapBtn = document.createElement('button');
+        mapBtn.type = 'button';
+        mapBtn.className = 'show-on-map-btn';
+        mapBtn.innerHTML = '📍 Show on Map';
+        mapBtn.addEventListener('click', () => focusMarker(race.name));
         
-        if (race.url) {
-          const urlBtn = document.createElement('a');
-          urlBtn.href = race.url;
-          urlBtn.target = '_blank';
-          urlBtn.className = 'rec-action-link';
-          urlBtn.innerHTML = `${race.is_parkrun ? 'Open parkrun' : 'Visit Official Website'} ↗`;
-          
-          grid.appendChild(createDetailItem('🔗', 'Registration:', urlBtn));
-        }
+        const mapItem = document.createElement('span');
+        mapItem.className = 'rec-meta-item';
+        mapItem.style.marginLeft = 'auto'; // Push map button to the right side if space permits
+        mapItem.appendChild(mapBtn);
         
-        card.appendChild(grid);
+        metaRow.appendChild(mapItem);
+        card.appendChild(metaRow);
         
-        // Explanation
+        // Explanation (Simple paragraph text)
         const exp = document.createElement('p');
         exp.className = 'rec-explanation';
         exp.textContent = rec.explanation;
+        
         card.appendChild(exp);
         
         recommendationsList.appendChild(card);
@@ -626,25 +674,48 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const name = document.createElement('h3');
         name.className = 'hist-name';
-        name.textContent = race.name;
+        name.textContent = race.name + " ";
+        
+        if (race.url) {
+          const moreLink = document.createElement('a');
+          moreLink.href = race.url;
+          moreLink.target = '_blank';
+          moreLink.className = 'rec-more-link';
+          moreLink.innerHTML = '(More ..)';
+          name.appendChild(moreLink);
+        }
         card.appendChild(name);
         
-        const details = document.createElement('div');
-        details.className = 'rec-details-grid';
-        if (race.date) details.appendChild(createDetailItem('📅', 'Typical Date:', race.date));
-        details.appendChild(createDetailItem('📍', 'Location:', race.location));
-        details.appendChild(createDetailItem('🏃', 'Distance:', race.distance));
-        if (race.url) {
-          const l = document.createElement('a');
-          l.href = race.url;
-          l.target = '_blank';
-          l.className = 'rec-action-link';
-          l.innerHTML = 'Visit Event Page ↗';
-          
-          details.appendChild(createDetailItem('🔗', 'Website:', l));
+        // Horizontal Metadata Row (Top row below title)
+        const metaRow = document.createElement('div');
+        metaRow.className = 'rec-meta-row';
+        
+        let metaHtml = '';
+        if (race.date) {
+          metaHtml += `<span class="rec-meta-item">📅 ${race.date}</span>`;
         }
-        card.appendChild(details);
+        if (metaHtml) metaHtml += ` <span class="rec-meta-divider">|</span> `;
+        metaHtml += `<span class="rec-meta-item">🏃 ${race.distance}</span>`;
+        metaHtml += ` <span class="rec-meta-divider">|</span> `;
+        metaHtml += `<span class="rec-meta-item">📍 ${race.location}</span>`;
+        metaRow.innerHTML = metaHtml;
 
+        // Show on Map link
+        const mapBtn = document.createElement('button');
+        mapBtn.type = 'button';
+        mapBtn.className = 'show-on-map-btn';
+        mapBtn.innerHTML = '📍 Show on Map';
+        mapBtn.addEventListener('click', () => focusMarker(race.name));
+        
+        const mapItem = document.createElement('span');
+        mapItem.className = 'rec-meta-item';
+        mapItem.style.marginLeft = 'auto'; // Push map button to the right side if space permits
+        mapItem.appendChild(mapBtn);
+        
+        metaRow.appendChild(mapItem);
+        card.appendChild(metaRow);
+
+        // Description (Simple paragraph text)
         if (race.description) {
           const desc = document.createElement('p');
           desc.className = 'hist-desc';
@@ -680,21 +751,53 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const tdName = document.createElement('td');
         tdName.style.fontWeight = '600';
-        tdName.textContent = event.name;
+        
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = event.name;
+        
+        const tag = document.createElement('span');
+        tag.className = 'badge-parkrun';
+        tag.style.fontSize = '9px';
+        tag.style.padding = '1px 4px';
+        tag.style.marginLeft = '8px';
+        tag.textContent = 'parkrun';
+        
+        const freeTag = document.createElement('span');
+        freeTag.className = 'badge-free';
+        freeTag.style.fontSize = '9px';
+        freeTag.style.padding = '1px 4px';
+        freeTag.style.marginLeft = '4px';
+        freeTag.textContent = 'Free';
+        
+        tdName.appendChild(nameSpan);
+        tdName.appendChild(tag);
+        tdName.appendChild(freeTag);
         
         const tdStart = document.createElement('td');
         tdStart.textContent = event.start_time;
         
         const tdLink = document.createElement('td');
+        tdLink.style.display = 'flex';
+        tdLink.style.gap = '6px';
+        
         const a = document.createElement('a');
         a.href = event.url;
         a.target = '_blank';
         a.className = 'rec-action-link';
         a.style.padding = '4px 10px';
         a.style.fontSize = '11px';
-        a.innerHTML = 'View page ↗';
+        a.innerHTML = 'Link ↗';
+        
+        const mapBtn = document.createElement('button');
+        mapBtn.type = 'button';
+        mapBtn.className = 'show-on-map-btn';
+        mapBtn.style.padding = '4px 10px';
+        mapBtn.style.fontSize = '11px';
+        mapBtn.innerHTML = '📍 Map';
+        mapBtn.addEventListener('click', () => focusMarker(event.name));
         
         tdLink.appendChild(a);
+        tdLink.appendChild(mapBtn);
         
         tr.appendChild(tdIdx);
         tr.appendChild(tdName);
@@ -745,5 +848,199 @@ document.addEventListener('DOMContentLoaded', () => {
     item.appendChild(iconSpan);
     item.appendChild(textSpan);
     return item;
+  }
+
+  // --- Dynamic Leaflet Mapping & Geocoding Logic ---
+
+  async function geocodeAddress(address) {
+    if (geocodeCache[address]) return geocodeCache[address];
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`;
+      const response = await fetch(url, {
+        headers: {
+          'Accept-Language': 'en-US,en;q=0.9',
+          'User-Agent': 'RunMate-AI-Webapp/1.0'
+        }
+      });
+      if (!response.ok) return null;
+      const data = await response.json();
+      if (data && data.length > 0) {
+        const result = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+        geocodeCache[address] = result;
+        return result;
+      }
+    } catch (err) {
+      console.error("Geocoding error for:", address, err);
+    }
+    return null;
+  }
+
+  async function initAndPlotMap(report) {
+    const mapEl = document.getElementById('map');
+    const mapSectionWrapper = document.getElementById('mapSectionWrapper');
+    if (!mapEl || !mapSectionWrapper) return;
+
+    // Reset marker registry
+    for (const key in markerMap) {
+      delete markerMap[key];
+    }
+
+    // Reset map instance if already exists
+    if (mapInstance) {
+      mapInstance.remove();
+      mapInstance = null;
+    }
+
+    // Show map container wrapper immediately so user sees loader
+    mapSectionWrapper.classList.remove('hidden');
+
+    // Show spinner loader inside map
+    mapEl.innerHTML = `
+      <div class="map-loader" id="mapLoader">
+        <div class="map-spinner"></div>
+        <span>Plotting events on map...</span>
+      </div>
+    `;
+
+    const searchLocation = report.profile.location;
+    const centerCoords = await geocodeAddress(searchLocation);
+    
+    const pointsToPlot = [];
+
+    // 1. Geocode Recommended Races (Green Pins)
+    if (report.recommendations && report.recommendations.length > 0) {
+      for (const rec of report.recommendations) {
+        const race = rec.race;
+        // Search specific race location
+        const coords = await geocodeAddress(race.location);
+        if (coords) {
+          pointsToPlot.push({
+            lat: coords.lat,
+            lon: coords.lon,
+            name: race.name,
+            info: `🏃 ${race.distance} • 📅 ${race.date || 'Date TBD'}`,
+            is_parkrun: false
+          });
+        }
+      }
+    }
+
+    // 2. Geocode Historical Races (Green Pins)
+    if (report.historical_races && report.historical_races.length > 0) {
+      for (const race of report.historical_races) {
+        const coords = await geocodeAddress(race.location);
+        if (coords) {
+          pointsToPlot.push({
+            lat: coords.lat,
+            lon: coords.lon,
+            name: race.name,
+            info: `🏃 ${race.distance} • Typical Date: ${race.date || 'TBD'}`,
+            is_parkrun: false
+          });
+        }
+      }
+    }
+
+    // 3. Geocode Parkruns (Blue Pins)
+    if (report.parkrun_local_events && report.parkrun_local_events.length > 0) {
+      for (const event of report.parkrun_local_events) {
+        // Clean name (strip "parkrun" suffix) to search for the physical park name
+        const cleanName = event.name.replace(/parkrun/gi, '').trim();
+        const searchContext = `${cleanName}, ${searchLocation}`;
+        let coords = await geocodeAddress(searchContext);
+        
+        // Fallback to original name if clean name returns nothing
+        if (!coords) {
+          coords = await geocodeAddress(`${event.name}, ${searchLocation}`);
+        }
+
+        if (coords) {
+          pointsToPlot.push({
+            lat: coords.lat,
+            lon: coords.lon,
+            name: event.name,
+            info: `📍 parkrun weekly 5K • 📅 ${event.start_time}`,
+            is_parkrun: true
+          });
+        }
+      }
+    }
+
+    // If no coordinates could be resolved, keep map hidden
+    if (pointsToPlot.length === 0) return;
+
+    // Show map container
+    mapSectionWrapper.classList.remove('hidden');
+
+    // Initialize Map
+    const defaultCenter = centerCoords || { lat: 54.0, lon: -2.0 }; // UK default center
+    mapInstance = L.map('map').setView([defaultCenter.lat, defaultCenter.lon], centerCoords ? 11 : 6);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(mapInstance);
+
+    markerGroup = L.featureGroup().addTo(mapInstance);
+
+    // Custom leaflet colored marker icons
+    const greenMarkerIcon = new L.Icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+
+    const blueMarkerIcon = new L.Icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+
+    // Add points to map
+    pointsToPlot.forEach(point => {
+      const marker = L.marker([point.lat, point.lon], {
+        icon: point.is_parkrun ? blueMarkerIcon : greenMarkerIcon
+      });
+
+      // Save marker reference
+      const markerKey = point.name.toLowerCase().trim();
+      markerMap[markerKey] = marker;
+
+      const popupContent = `
+        <div style="font-family: 'Inter', sans-serif; font-size: 13px; color: #091124; line-height: 1.4;">
+          <strong style="font-family: 'Outfit', sans-serif; font-size: 14px; display: block; margin-bottom: 2px; color: #0044ff;">${point.name}</strong>
+          <span>${point.info}</span>
+        </div>
+      `;
+
+      marker.bindPopup(popupContent);
+      marker.addTo(markerGroup);
+    });
+
+    // Automatically zoom/pan to fit all markers nicely
+    try {
+      mapInstance.fitBounds(markerGroup.getBounds(), { padding: [40, 40] });
+    } catch (e) {
+      console.error("Leaflet fitBounds error:", e);
+    }
+  }
+
+  // --- Map Navigation & Popups focus helper ---
+  function focusMarker(name) {
+    const key = name.toLowerCase().trim();
+    const marker = markerMap[key];
+    const mapSectionWrapper = document.getElementById('mapSectionWrapper');
+    if (marker && mapInstance && mapSectionWrapper) {
+      mapSectionWrapper.scrollIntoView({ behavior: 'smooth' });
+      setTimeout(() => {
+        marker.openPopup();
+        mapInstance.setView(marker.getLatLng(), 13);
+      }, 500); // Wait for smooth scroll to finish
+    }
   }
 });

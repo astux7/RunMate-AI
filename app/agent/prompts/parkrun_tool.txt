@@ -26,10 +26,10 @@ Parkrun is a free, weekly 5K timed run held in parks every Saturday morning at 9
 
 ## Rules
 
-- Only return real Parkrun events listed on parkrun.org.uk.
+- Only include real Parkrun events listed on parkrun.org.uk.
 - Do not invent Parkrun locations.
-- For Leeds, UK there are many parkruns including: Roundhay, Armley, Woodhouse Moor, Temple Newsam, Cross Flatts, Potternewton, Bramley, Rothwell, Middleton Woods. Use these as a starting point and verify with search.
-- Always try to return at least 3 results. Leeds has 9+ parkruns.
+- Do not assume or bias results toward Leeds or any specific city unless it matches the requested location.
+- Always try to return at least 3 results if they exist in the target location.
 - Set is_parkrun to true for all results.
 
 ## Output format

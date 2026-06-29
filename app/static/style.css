@@ -117,14 +117,14 @@ a:hover {
   top: 0;
   z-index: 100;
   transition: transform var(--transition-speed) ease-in-out;
-  overflow-y: auto;
+  overflow-y: hidden;
   flex-shrink: 0;
 }
 
 .sidebar-header {
   display: flex;
   align-items: center;
-  justify-content: justify;
+  justify-content: space-between;
   margin-bottom: 32px;
 }
 
@@ -159,7 +159,8 @@ a:hover {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-  min-height: 200px;
+  min-height: 0;
+  margin-bottom: 0;
 }
 
 .section-title {
@@ -256,7 +257,7 @@ a:hover {
   flex-direction: column;
   gap: 6px;
   overflow-y: auto;
-  max-height: 250px;
+  flex-grow: 1;
   padding-right: 2px;
 }
 .empty-history-text {
@@ -861,6 +862,28 @@ a:hover {
   border-radius: 8px;
   border: 1px solid var(--border-color);
 }
+.rec-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  background-color: var(--bg-app);
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  margin-top: 8px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.rec-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.rec-meta-divider {
+  color: var(--border-color);
+}
 .rec-detail-item {
   display: flex;
   align-items: center;
@@ -1198,4 +1221,92 @@ input:disabled {
   .summary-cards {
     grid-template-columns: 1fr;
   }
+}
+
+/* Map Loader and Spinner overlay */
+.map-container-relative {
+  position: relative;
+  width: 100%;
+}
+.map-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 100%;
+  width: 100%;
+  background-color: var(--bg-sidebar);
+  border-radius: 12px;
+  color: var(--text-muted);
+  font-family: var(--font-family-sans);
+  font-size: 14px;
+}
+.map-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--border-color);
+  border-top-color: var(--border-focus);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Show on Map Button inside result card details grid */
+.show-on-map-btn {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--border-focus);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-speed);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.show-on-map-btn:hover {
+  background-color: var(--bg-hover);
+  border-color: var(--border-focus);
+  color: var(--text-main);
+}
+
+/* Badges for Parkrun & Free status labels */
+.badge-parkrun {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background-color: #0044ff; /* Blue background */
+  color: #ffffff;            /* White text */
+  display: inline-block;
+  letter-spacing: 0.03em;
+}
+
+.badge-free {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background-color: #00e676; /* Green background */
+  color: #000000;            /* Black text */
+  display: inline-block;
+  letter-spacing: 0.03em;
+}
+
+/* More link at the end of titles */
+.rec-more-link {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--border-focus);
+  text-decoration: underline;
+  margin-left: 6px;
+  cursor: pointer;
+  transition: color var(--transition-speed);
+}
+.rec-more-link:hover {
+  color: var(--text-main);
 }

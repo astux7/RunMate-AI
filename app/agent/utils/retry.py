@@ -64,10 +64,15 @@ def call_with_retry(fn: Callable[[], T]) -> T:
             return fn()
         except Exception as exc:
             msg = str(exc)
-            is_rate_limit = "429" in msg or "RESOURCE_EXHAUSTED" in msg
+            is_transient = (
+                "429" in msg or
+                "RESOURCE_EXHAUSTED" in msg or
+                "503" in msg or
+                "UNAVAILABLE" in msg
+            )
 
-            if not is_rate_limit:
-                raise  # Non-429 error — propagate immediately
+            if not is_transient:
+                raise  # Non-transient error — propagate immediately
 
             if is_credits_depleted(msg):
                 raise  # Billing failure — retrying won't help
@@ -75,14 +80,14 @@ def call_with_retry(fn: Callable[[], T]) -> T:
             if attempt == _MAX_RETRIES:
                 raise
 
-            # Transient rate limit — back off and retry
+            # Transient rate limit/unavailable — back off and retry
             delay = _RETRY_BASE_DELAY * (2 ** (attempt - 1))
             match = re.search(r"retry[^\d]*(\d+(?:\.\d+)?)\s*s", msg, re.IGNORECASE)
             if match:
                 delay = float(match.group(1)) + 2
 
             print(
-                f"  ⏳ Rate limit hit (attempt {attempt}/{_MAX_RETRIES}). "
+                f"  ⏳ Transient API error hit (attempt {attempt}/{_MAX_RETRIES}). "
                 f"Waiting {delay:.0f}s before retrying…"
             )
             time.sleep(delay)
