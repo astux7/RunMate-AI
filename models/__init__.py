@@ -1,5 +1,5 @@
 from models.runner import RunnerLevel, RunnerProfile, CoachDecision
-from models.race import Race, RaceSearchResult, Recommendation, RunmateReport
+from models.race import Race, RaceSearchResult, Recommendation, RunmateReport, ParkrunLocation
 
 __all__ = [
     "RunnerLevel",
@@ -9,4 +9,5 @@ __all__ = [
     "RaceSearchResult",
     "Recommendation",
     "RunmateReport",
+    "ParkrunLocation",
 ]

@@ -93,7 +93,7 @@ runmate.py              CLI entry point (Typer)
 | Variable | Default | Description |
 |---|---|---|
 | `GOOGLE_API_KEY` | — | **Required.** Gemini API key |
-| `MODEL_NAME` | `gemini-2.0-flash` | Gemini model to use |
+| `MODEL_NAME` | `gemini-2.5-flash` | Gemini model to use |
 | `ENABLE_SEARCH_GROUNDING` | `true` | Use Google Search for real race data |
 | `SAVE_REPORTS` | `false` | Auto-save reports to `output/` |
 

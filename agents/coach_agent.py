@@ -4,6 +4,7 @@ CoachAgent — interprets the runner profile and decides what to search for.
 Responsibilities:
   - Resolve race distances to search (based on level + supplied distance)
   - Resolve months to search (next 3 months if not supplied)
+  - Skip the current month if fewer than 7 days remain in it
   - Generate beginner guidance text for STARTER runners
   - Return a CoachDecision
 
@@ -12,7 +13,7 @@ This eliminates one full API call per run and makes the agent independently
 testable without any API key.
 """
 
-from calendar import month_name
+from calendar import month_name, monthrange
 from datetime import date
 
 from agents.base_agent import BaseAgent
@@ -81,13 +82,14 @@ class CoachAgent(BaseAgent):
         """
         Deterministically resolve the list of distances to search.
 
-        STARTER + no distance  → ["5K"]
-        STARTER + distance     → [distance]
-        RUNNER  + no distance  → all common distances
-        RUNNER  + distance     → [distance]
+        STARTER + no distance   → ["5K"]
+        STARTER + distance(es)  → supplied distances
+        RUNNER  + no distance   → all common distances
+        RUNNER  + distance(es)  → supplied distances
         """
-        if profile.distance:
-            return [profile.distance]
+        supplied = profile.distances  # list via property
+        if supplied:
+            return supplied
         if profile.level == RunnerLevel.STARTER:
             return self._STARTER_DEFAULT
         return self._COMMON_DISTANCES
@@ -96,16 +98,29 @@ class CoachAgent(BaseAgent):
         """
         Resolve months to search.
 
-        If the user supplied a month, use only that.
-        Otherwise return the next 3 calendar months from today.
+        If the user supplied month(s), use those (deduplicated, title-cased).
+        Otherwise return the next 3 calendar months, skipping the current one
+        if fewer than 7 days remain in it.
         """
-        if profile.month:
-            return [profile.month]
+        supplied = profile.months  # list via property
+        if supplied:
+            # Deduplicate while preserving order
+            seen: set[str] = set()
+            result = []
+            for m in supplied:
+                if m not in seen:
+                    seen.add(m)
+                    result.append(m)
+            return result
 
         today = date.today()
+        days_in_month = monthrange(today.year, today.month)[1]
+        days_remaining = days_in_month - today.day
+        start_offset = 1 if days_remaining < 7 else 0
+
         months = []
-        for offset in range(3):
-            month_index = (today.month - 1 + offset) % 12 + 1
+        for i in range(3):
+            month_index = (today.month - 1 + start_offset + i) % 12 + 1
             months.append(month_name[month_index])
         return months
 

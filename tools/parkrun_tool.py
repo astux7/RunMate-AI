@@ -16,6 +16,7 @@ from google.genai import types
 from models.runner import RunnerProfile
 from models.race import Race, RaceSearchResult
 from tools.base_tool import BaseTool
+from utils.retry import call_with_retry
 
 
 _PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "parkrun_tool.txt"
@@ -34,7 +35,7 @@ class ParkrunTool(BaseTool):
     client:
         A configured ``google.genai.Client`` instance.
     model:
-        Gemini model name (default: from MODEL_NAME env var or gemini-2.0-flash).
+        Gemini model name (default: from MODEL_NAME env var or gemini-2.5-flash).
     enable_search_grounding:
         When True (default), enables Google Search grounding.
     """
@@ -46,7 +47,7 @@ class ParkrunTool(BaseTool):
         enable_search_grounding: bool = True,
     ) -> None:
         self._client = client
-        self._model = model or os.getenv("MODEL_NAME", "gemini-2.0-flash")
+        self._model = model or os.getenv("MODEL_NAME", "gemini-2.5-flash")
         self._enable_search = enable_search_grounding
         self._system_prompt = _PROMPT_PATH.read_text(encoding="utf-8")
 
@@ -79,10 +80,12 @@ class ParkrunTool(BaseTool):
         )
 
         try:
-            response = self._client.models.generate_content(
-                model=self._model,
-                contents=user_message,
-                config=config,
+            response = call_with_retry(
+                lambda: self._client.models.generate_content(
+                    model=self._model,
+                    contents=user_message,
+                    config=config,
+                )
             )
             raw = response.text.strip()
             if raw.startswith("```"):
@@ -97,6 +100,13 @@ class ParkrunTool(BaseTool):
                 query_summary=data.get("query_summary", ""),
             )
         except Exception as exc:  # noqa: BLE001
+            import traceback, sys
+            from utils.retry import is_credits_depleted
+            if is_credits_depleted(str(exc)):
+                raise  # Let billing errors surface to the top-level handler
+            print(f"[ParkrunTool] search failed: {exc}", file=sys.stderr)
+            if os.getenv("RUNMATE_DEBUG", "").lower() == "true":
+                traceback.print_exc(file=sys.stderr)
             return RaceSearchResult(
                 races=[],
                 source="parkrun",

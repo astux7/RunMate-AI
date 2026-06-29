@@ -9,19 +9,16 @@ All agents share a common interface:
 """
 
 import os
-import re
-import time
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Callable, TypeVar
+
+from utils.retry import call_with_retry
 
 T = TypeVar("T")
 
 _PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
 
-# Retry settings — override via env vars if needed
-_MAX_RETRIES = int(os.getenv("RUNMATE_MAX_RETRIES", "3"))
-_RETRY_BASE_DELAY = float(os.getenv("RUNMATE_RETRY_BASE_DELAY", "10"))  # seconds
 
 
 class BaseAgent(ABC):
@@ -38,7 +35,7 @@ class BaseAgent(ABC):
             self._system_prompt = ""
 
     def _get_model(self) -> str:
-        return os.getenv("MODEL_NAME", "gemini-2.0-flash")
+        return os.getenv("MODEL_NAME", "gemini-2.5-flash")
 
     def _strip_fences(self, text: str) -> str:
         """Remove accidental markdown code fences from LLM output."""
@@ -53,53 +50,8 @@ class BaseAgent(ABC):
         return text
 
     def _call_with_retry(self, fn: Callable[[], T]) -> T:
-        """
-        Call ``fn`` and retry on 429 RESOURCE_EXHAUSTED with exponential backoff.
-
-        The API response often includes a recommended retry delay in seconds.
-        We honour that delay when available, otherwise we use exponential backoff
-        starting at ``_RETRY_BASE_DELAY`` seconds.
-
-        Parameters
-        ----------
-        fn:
-            A zero-argument callable that makes a single Gemini API call.
-
-        Returns
-        -------
-        T
-            Whatever ``fn`` returns on success.
-
-        Raises
-        ------
-        Exception
-            Re-raises the last exception after all retries are exhausted.
-        """
-        last_exc: Exception | None = None
-        for attempt in range(1, _MAX_RETRIES + 1):
-            try:
-                return fn()
-            except Exception as exc:
-                msg = str(exc)
-                is_rate_limit = "429" in msg or "RESOURCE_EXHAUSTED" in msg
-
-                if not is_rate_limit or attempt == _MAX_RETRIES:
-                    raise
-
-                # Try to extract the suggested retry delay from the error message
-                delay = _RETRY_BASE_DELAY * (2 ** (attempt - 1))  # exponential default
-                match = re.search(r"retry[^\d]*(\d+(?:\.\d+)?)\s*s", msg, re.IGNORECASE)
-                if match:
-                    delay = float(match.group(1)) + 2  # honour API suggestion + small buffer
-
-                print(
-                    f"  ⏳ Rate limit hit (attempt {attempt}/{_MAX_RETRIES}). "
-                    f"Waiting {delay:.0f}s before retrying…"
-                )
-                time.sleep(delay)
-                last_exc = exc
-
-        raise last_exc  # type: ignore[misc]
+        """Delegate to the shared retry utility in utils.retry."""
+        return call_with_retry(fn)
 
     @abstractmethod
     def run(self, *args: object, **kwargs: object) -> object:

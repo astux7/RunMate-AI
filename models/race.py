@@ -7,12 +7,19 @@ Recommendation   – a ranked race with an AI explanation
 RunmateReport    – the full output report passed to OutputAgent
 """
 
-from typing import Optional, TYPE_CHECKING
+from typing import Optional
 
 from pydantic import BaseModel
 
-if TYPE_CHECKING:
-    from models.runner import RunnerProfile, CoachDecision
+from models.runner import RunnerProfile, CoachDecision
+
+
+class ParkrunLocation(BaseModel):
+    """A single local parkrun event with its homepage URL."""
+
+    name: str
+    url: str
+    start_time: str = "Saturday 9:00am"
 
 
 class Race(BaseModel):
@@ -24,6 +31,7 @@ class Race(BaseModel):
     distance: str
     url: Optional[str] = None
     is_parkrun: bool = False
+    is_historical: bool = False  # True = typical/historical, not confirmed upcoming
     description: Optional[str] = None
 
 
@@ -62,11 +70,15 @@ class RunmateReport(BaseModel):
     optional saved text file.
     """
 
-    profile: "RunnerProfile"
-    coach_decision: "CoachDecision"
+    profile: RunnerProfile
+    coach_decision: CoachDecision
     recommendations: list[Recommendation]
     search_summary: str
     used_parkrun_fallback: bool = False
+    parkrun_local_events: list["ParkrunLocation"] = []
+    historical_races: list[Race] = []
+    historical_insight: str = ""
+    travel_tip: str = ""
     disclaimer: str = (
         "RunMate AI provides informational recommendations only. "
         "Please consult a medical professional before starting any new exercise programme."

@@ -15,6 +15,7 @@ from google.genai import types
 from models.runner import RunnerProfile
 from models.race import Race, RaceSearchResult
 from tools.base_tool import BaseTool
+from utils.retry import call_with_retry
 
 
 _PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "race_search_agent.txt"
@@ -29,7 +30,7 @@ class RaceSearchTool(BaseTool):
     client:
         A configured ``google.genai.Client`` instance.
     model:
-        Gemini model name (default: from MODEL_NAME env var or gemini-2.0-flash).
+        Gemini model name (default: from MODEL_NAME env var or gemini-2.5-flash).
     enable_search_grounding:
         When True (default), enables Google Search grounding so the LLM can
         look up real, current race events.
@@ -42,7 +43,7 @@ class RaceSearchTool(BaseTool):
         enable_search_grounding: bool = True,
     ) -> None:
         self._client = client
-        self._model = model or os.getenv("MODEL_NAME", "gemini-2.0-flash")
+        self._model = model or os.getenv("MODEL_NAME", "gemini-2.5-flash")
         self._enable_search = enable_search_grounding
         self._system_prompt = _PROMPT_PATH.read_text(encoding="utf-8")
 
@@ -68,11 +69,17 @@ class RaceSearchTool(BaseTool):
         distances = distances or ["5K"]
         months = months or []
 
+        from datetime import date
+        today_str = date.today().strftime("%d %B %Y")  # e.g. "29 June 2026"
+
         user_message = (
+            f"Today's date: {today_str}\n"
             f"Runner profile:\n"
             f"- Location: {profile.location}\n"
             f"- Distances to search: {', '.join(distances)}\n"
             f"- Months to search: {', '.join(months) if months else 'next 3 months'}\n\n"
+            f"IMPORTANT: Only return races with dates strictly AFTER {today_str}. "
+            f"Do not include any race that has already happened.\n\n"
             f"Please search for real, official running races matching these criteria "
             f"and return the results as JSON."
         )
@@ -88,7 +95,7 @@ class RaceSearchTool(BaseTool):
         )
 
         try:
-            response = self._call_with_retry(
+            response = call_with_retry(
                 lambda: self._client.models.generate_content(
                     model=self._model,
                     contents=user_message,
@@ -109,6 +116,13 @@ class RaceSearchTool(BaseTool):
                 query_summary=data.get("query_summary", ""),
             )
         except Exception as exc:  # noqa: BLE001
+            import traceback, sys
+            from utils.retry import is_credits_depleted
+            if is_credits_depleted(str(exc)):
+                raise  # Let billing errors surface to the top-level handler
+            print(f"[RaceSearchTool] search failed: {exc}", file=sys.stderr)
+            if os.getenv("RUNMATE_DEBUG", "").lower() == "true":
+                traceback.print_exc(file=sys.stderr)
             return RaceSearchResult(
                 races=[],
                 source="official",

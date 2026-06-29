@@ -23,8 +23,22 @@ class RunnerProfile(BaseModel):
 
     level: RunnerLevel
     location: str
-    distance: Optional[str] = None
-    month: Optional[str] = None
+    distance: Optional[str] = None   # raw CLI input, comma-separated if multiple
+    month: Optional[str] = None      # raw CLI input, comma-separated if multiple
+
+    @property
+    def distances(self) -> list[str]:
+        """Return distance(s) as a list, splitting comma-separated input."""
+        if not self.distance:
+            return []
+        return [d.strip() for d in self.distance.split(",") if d.strip()]
+
+    @property
+    def months(self) -> list[str]:
+        """Return month(s) as a list, splitting comma-separated input."""
+        if not self.month:
+            return []
+        return [m.strip().title() for m in self.month.split(",") if m.strip()]
 
     @field_validator("location")
     @classmethod
