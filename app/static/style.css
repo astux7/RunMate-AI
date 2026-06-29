@@ -503,24 +503,24 @@ a:hover {
   gap: 8px;
 }
 .chip {
-  background-color: var(--bg-app);
+  background-color: #ffffff;
   border: 1px solid var(--border-color);
   border-radius: 20px;
   padding: 8px 16px;
   font-size: 13px;
-  font-weight: 500;
-  color: var(--text-main);
+  font-weight: 600;
+  color: #000000;
   cursor: pointer;
   transition: all var(--transition-speed);
 }
 .chip:hover {
-  background-color: var(--bg-hover);
+  background-color: #f1f5f9;
 }
 .chip.active {
-  background-color: var(--accent-blue);
-  border-color: var(--border-focus);
-  color: #ffffff;
-  font-weight: 600;
+  background-color: #00f0ff;
+  border-color: #0044ff;
+  color: #000000;
+  font-weight: 700;
 }
 
 .scrollable-chips {
@@ -1085,20 +1085,20 @@ input:disabled {
 }
 .chip.not-recommended {
   border-style: dashed !important;
-  border-color: #fca5a5 !important;
-  color: #dc2626 !important;
-  background-color: #fef2f2 !important;
+  border-color: #ef4444 !important;
+  color: #000000 !important;
+  background-color: #ffffff !important;
 }
 .chip.not-recommended:hover {
   background-color: #fee2e2 !important;
-  border-color: #f87171 !important;
+  border-color: #ef4444 !important;
 }
 .chip.warning-active {
-  background-color: #ef4444 !important;
-  color: white !important;
-  border-color: #b91c1c !important;
+  background-color: #fee2e2 !important;
+  color: #000000 !important;
+  border-color: #ef4444 !important;
   border-style: solid !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2) !important;
 }
 
