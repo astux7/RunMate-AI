@@ -4,45 +4,47 @@
   --font-family-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-family-display: 'Outfit', var(--font-family-sans);
 
-  /* Clean light theme palette */
-  --bg-app: #f8fafc;
+  /* Sonic bluish theme palette */
+  --bg-app: #f0f6fc;
   --bg-sidebar: #ffffff;
   --bg-card: #ffffff;
-  --bg-hover: #f1f5f9;
+  --bg-hover: #e1effe;
   
-  --border-color: #e2e8f0;
-  --border-focus: #3b82f6;
+  --border-color: #d0d7de;
+  --border-focus: #0044ff;
   
-  --text-main: #0f172a;
-  --text-muted: #475569;
-  --text-light: #94a3b8;
+  --text-main: #091124;
+  --text-muted: #3b4b6b;
+  --text-light: #6e7f9f;
   
-  /* Running accents */
-  --accent-blue: #3b82f6;
-  --accent-blue-hover: #2563eb;
-  --accent-blue-light: #eff6ff;
+  /* Sonic accents */
+  --accent-blue: #0044ff;
+  --accent-blue-hover: #0033cc;
+  --accent-blue-light: #e6eeff;
   
-  --accent-cyan: #06b6d4;
-  --accent-cyan-light: #ecfeff;
-  --accent-cyan-border: #cffafe;
+  --accent-cyan: #00bfff;
+  --accent-cyan-hover: #0099cc;
+  --accent-cyan-light: #e6f7ff;
+  --accent-cyan-border: #bae6ff;
   
-  --accent-green: #10b981;
-  --accent-green-hover: #059669;
-  --accent-green-light: #f0fdf4;
-  --accent-green-border: #d1fae5;
+  --accent-green: #0ea5e9;
+  --accent-green-hover: #0284c7;
+  --accent-green-light: #f0f9ff;
+  --accent-green-border: #e0f2fe;
   
-  --accent-yellow: #f59e0b;
+  /* Rings / Gold medals theme */
+  --accent-yellow: #eab308;
   --accent-yellow-light: #fefbeb;
-  --accent-yellow-border: #fef3c7;
+  --accent-yellow-border: #fef08a;
   
   --accent-red: #ef4444;
   --accent-red-light: #fef2f2;
   --accent-red-border: #fee2e2;
 
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 68, 255, 0.05);
+  --shadow-md: 0 4px 12px -2px rgba(0, 68, 255, 0.08), 0 2px 6px -1px rgba(0, 68, 255, 0.04);
+  --shadow-lg: 0 12px 20px -3px rgba(0, 68, 255, 0.12), 0 4px 8px -2px rgba(0, 68, 255, 0.06);
+  --shadow-xl: 0 24px 38px -5px rgba(0, 68, 255, 0.16), 0 8px 16px -6px rgba(0, 68, 255, 0.08);
   
   --sidebar-width: 320px;
   --transition-speed: 0.25s;
@@ -506,8 +508,6 @@ a:hover {
 }
 
 .scrollable-chips {
-  max-height: 100px;
-  overflow-y: auto;
   padding: 2px;
 }
 
@@ -1067,16 +1067,23 @@ input:disabled {
   line-height: 1.5;
   margin-bottom: 10px;
 }
-.chip.red-marked {
-  border-color: #f87171 !important;
+.chip.not-recommended {
+  border-style: dashed !important;
+  border-color: #fca5a5 !important;
   color: #dc2626 !important;
   background-color: #fef2f2 !important;
-  text-decoration: line-through !important;
-  opacity: 0.75 !important;
-  cursor: not-allowed !important;
 }
-.chip.red-marked:hover {
+.chip.not-recommended:hover {
   background-color: #fee2e2 !important;
+  border-color: #f87171 !important;
+}
+.chip.warning-active {
+  background-color: #ef4444 !important;
+  color: white !important;
+  border-color: #b91c1c !important;
+  border-style: solid !important;
+  font-weight: 600 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2) !important;
 }
 
 .label-info-text {
@@ -1088,18 +1095,18 @@ input:disabled {
 
 /* Richer colors for recommendations and summaries */
 .rec-card.rec-official {
-  border: 1.5px solid #a5f3fc !important;
-  background: linear-gradient(180deg, #ffffff 0%, #ecfeff 100%) !important;
-  box-shadow: 0 4px 14px rgba(6, 182, 212, 0.06) !important;
+  border: 1.5px solid #bfe3ff !important;
+  background: linear-gradient(180deg, #ffffff 0%, #e6f7ff 100%) !important;
+  box-shadow: 0 4px 14px rgba(0, 191, 255, 0.08) !important;
 }
 .rec-card.rec-parkrun {
   border: 1.5px solid #fef08a !important;
   background: linear-gradient(180deg, #ffffff 0%, #fefbeb 100%) !important;
-  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.06) !important;
+  box-shadow: 0 4px 14px rgba(234, 179, 8, 0.06) !important;
 }
 .summary-card.profile-summary-card {
-  border: 1.5px solid #bae6fd !important;
-  background-color: #f0f9ff !important;
+  border: 1.5px solid #bae6ff !important;
+  background-color: #e6f7ff !important;
 }
 
 /* Short URL Action button styling */

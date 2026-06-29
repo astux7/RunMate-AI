@@ -137,23 +137,32 @@ document.addEventListener('DOMContentLoaded', () => {
       // Handle distance chips based on level
       distanceChipsContainer.querySelectorAll('.chip').forEach(chip => {
         const isAdvanced = chip.dataset.advanced === 'true';
+        chip.disabled = false; // Always enabled for both Starter and Runner
         
         if (isStarterSelected) {
           if (isAdvanced) {
-            chip.disabled = true;
-            chip.classList.remove('active');
-            chip.classList.add('red-marked');
+            chip.classList.add('not-recommended');
             chip.title = "Not recommended for Starter level";
+            
+            // If it was standard active, transform to warning-active
+            if (chip.classList.contains('active')) {
+              chip.classList.remove('active');
+              chip.classList.add('warning-active');
+            }
           } else {
-            chip.disabled = false;
-            chip.classList.remove('red-marked');
+            chip.classList.remove('not-recommended', 'warning-active');
             chip.removeAttribute('title');
           }
         } else {
-          // RUNNER selected - all options enabled normally
-          chip.disabled = false;
-          chip.classList.remove('red-marked');
+          // RUNNER selected - all options enabled normally, remove warning markings
+          chip.classList.remove('not-recommended');
           chip.removeAttribute('title');
+          
+          // If it was warning-active, transform back to standard active
+          if (chip.classList.contains('warning-active')) {
+            chip.classList.remove('warning-active');
+            chip.classList.add('active');
+          }
         }
       });
 
@@ -177,11 +186,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const chip = e.target;
       if (chip.classList.contains('chip')) {
         e.preventDefault();
-        // Prevent selection of disabled or red-marked chips
-        if (chip.disabled || chip.classList.contains('red-marked')) {
-          return;
+        if (chip.disabled) return;
+        
+        if (chip.classList.contains('not-recommended')) {
+          // Starter clicking an advanced distance chip - toggle warning-active state
+          chip.classList.toggle('warning-active');
+        } else {
+          // Standard chip - toggle active state
+          chip.classList.toggle('active');
         }
-        chip.classList.toggle('active');
       }
     });
   }
@@ -189,15 +202,16 @@ document.addEventListener('DOMContentLoaded', () => {
   function getSelectedChips(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return [];
-    const activeChips = container.querySelectorAll('.chip.active');
+    // Collect both standard active and warning-active chips
+    const activeChips = container.querySelectorAll('.chip.active, .chip.warning-active');
     return Array.from(activeChips).map(chip => chip.dataset.value);
   }
 
   function clearSelectedChips(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
-    container.querySelectorAll('.chip.active').forEach(chip => {
-      chip.classList.remove('active');
+    container.querySelectorAll('.chip.active, .chip.warning-active').forEach(chip => {
+      chip.classList.remove('active', 'warning-active');
     });
   }
 
@@ -206,8 +220,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!container || !values) return;
     clearSelectedChips(containerId);
     container.querySelectorAll('.chip').forEach(chip => {
-      if (values.includes(chip.dataset.value) && !chip.disabled && !chip.classList.contains('red-marked')) {
-        chip.classList.add('active');
+      if (values.includes(chip.dataset.value) && !chip.disabled) {
+        if (chip.classList.contains('not-recommended')) {
+          chip.classList.add('warning-active');
+        } else {
+          chip.classList.add('active');
+        }
       }
     });
   }
