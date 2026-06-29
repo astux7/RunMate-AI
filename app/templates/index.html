@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,12 +8,16 @@
   <!-- Google Fonts: Inter and Outfit -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/style.css?v=1.2">
   <!-- Leaflet Map CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 </head>
+
 <body>
   <div class="app-container">
     <!-- Sidebar -->
@@ -37,7 +42,7 @@
           <div class="empty-history-text">No recent searches</div>
         </div>
       </div>
-      
+
       <div class="sidebar-footer">
         <p class="footer-version">v1.0.0 • AI Studio Grounding</p>
       </div>
@@ -59,84 +64,98 @@
       <!-- Welcome Banner -->
       <section class="welcome-banner" id="welcomeBanner">
         <div class="welcome-text">
-          <h1>Find your perfect running race.</h1>
-          <p>Tell RunMate your fitness level and target city. We'll search live race databases using Google Search grounding, check local weekly parkruns, and build a tailored training outline.</p>
+          <h1>Let's find your next run, together.</h1>
+          <p>Every journey starts with a single step - and you don't have to take it alone. Tell RunMate your location
+            and how you feel about running. We'll jog through live race databases, look up free, friendly Saturday
+            parkruns, and build a personalized outline just for you. Whether you want to walk a 5K with zero judgment or
+            smash a marathon, we're lacing up alongside you!</p>
         </div>
       </section>
 
       <!-- Search Form Box -->
       <section class="form-container">
-        <form id="searchForm" class="search-form">
-          <div class="form-grid">
-            <!-- Level Input -->
-            <div class="form-group level-group">
-              <label class="group-label">Experience Level</label>
-              <div class="level-selector">
-                <input type="radio" name="level" id="levelStarter" value="STARTER">
-                <label for="levelStarter" class="level-label starter-label">
-                  <span class="bullet"></span>
-                  <span class="text">Starter</span>
-                </label>
-                
-                <input type="radio" name="level" id="levelRunner" value="RUNNER">
-                <label for="levelRunner" class="level-label runner-label">
-                  <span class="bullet"></span>
-                  <span class="text">Runner</span>
-                </label>
+        <div class="form-toggle-header" id="formToggleHeader">
+          <span class="toggle-title">🔍 Edit Search Parameters</span>
+          <span class="toggle-icon" id="formToggleIcon">−</span>
+        </div>
+        <div class="form-collapsible-body expanded" id="formCollapsibleBody">
+          <form id="searchForm" class="search-form">
+            <div class="form-grid">
+              <!-- Level Input -->
+              <div class="form-group level-group">
+                <label class="group-label">Experience Level</label>
+                <div class="level-selector">
+                  <input type="radio" name="level" id="levelStarter" value="STARTER">
+                  <label for="levelStarter" class="level-label starter-label">
+                    <span class="bullet"></span>
+                    <span class="text">Starter</span>
+                  </label>
+
+                  <input type="radio" name="level" id="levelRunner" value="RUNNER">
+                  <label for="levelRunner" class="level-label runner-label">
+                    <span class="bullet"></span>
+                    <span class="text">Runner</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Location Input -->
+              <div class="form-group">
+                <label for="locationInput" class="group-label">Target Location</label>
+                <div class="input-wrapper location-wrapper">
+                  <span class="input-icon">📍</span>
+                  <input type="text" id="locationInput" placeholder="e.g. Leeds, United Kingdom or Germany" required
+                    autocomplete="off">
+                  <div class="autocomplete-suggestions hidden" id="autocompleteSuggestions"></div>
+                </div>
+              </div>
+
+              <!-- Distances Option -->
+              <div class="form-group">
+                <label class="group-label">Preferred Distances (Optional)</label>
+                <div class="starter-warning-text hidden" id="starterWarningText">
+                  💡 We recommend starting with <strong>5K</strong> or <strong>10K</strong> distances to build your base
+                  safely. Longer distances (Half Marathon, Marathon, Ultra) are not recommended at the Starter level.
+                </div>
+                <div class="chip-container" id="distanceChips">
+                  <button type="button" class="chip" data-value="5K" disabled>5K</button>
+                  <button type="button" class="chip" data-value="10K" disabled>10K</button>
+                  <button type="button" class="chip" data-value="Half Marathon" data-advanced="true" disabled>Half
+                    Marathon</button>
+                  <button type="button" class="chip" data-value="Marathon" data-advanced="true"
+                    disabled>Marathon</button>
+                  <button type="button" class="chip" data-value="Ultra" data-advanced="true" disabled>Ultra</button>
+                </div>
+              </div>
+
+              <!-- Months Option -->
+              <div class="form-group">
+                <label class="group-label">Months to Search (Optional) <span class="label-info-text">(next 3 months by
+                    default)</span></label>
+                <div class="chip-container scrollable-chips" id="monthChips">
+                  <!-- Dynamically generated rolling 12 months in JavaScript -->
+                </div>
               </div>
             </div>
 
-            <!-- Location Input -->
-            <div class="form-group">
-              <label for="locationInput" class="group-label">Target Location</label>
-              <div class="input-wrapper location-wrapper">
-                <span class="input-icon">📍</span>
-                <input type="text" id="locationInput" placeholder="Select experience level first..." required autocomplete="off" disabled>
-                <div class="autocomplete-suggestions hidden" id="autocompleteSuggestions"></div>
+            <!-- Bottom Action Row -->
+            <div class="action-row">
+              <div class="grounding-toggle-container">
+                <input type="checkbox" id="groundingToggle" checked disabled>
+                <label for="groundingToggle" class="disabled-label">Use Google Search Grounding</label>
               </div>
+              <button type="submit" class="submit-btn" id="submitBtn" disabled>
+                <span class="btn-text">Let's find a race</span>
+                <span class="btn-icon">⚡</span>
+              </button>
             </div>
-
-            <!-- Distances Option -->
-            <div class="form-group">
-              <label class="group-label">Preferred Distances (Optional)</label>
-              <div class="starter-warning-text hidden" id="starterWarningText">
-                💡 We recommend starting with <strong>5K</strong> or <strong>10K</strong> distances to build your base safely. Longer distances (Half Marathon, Marathon, Ultra) are not recommended at the Starter level.
-              </div>
-              <div class="chip-container" id="distanceChips">
-                <button type="button" class="chip" data-value="5K" disabled>5K</button>
-                <button type="button" class="chip" data-value="10K" disabled>10K</button>
-                <button type="button" class="chip" data-value="Half Marathon" data-advanced="true" disabled>Half Marathon</button>
-                <button type="button" class="chip" data-value="Marathon" data-advanced="true" disabled>Marathon</button>
-                <button type="button" class="chip" data-value="Ultra" data-advanced="true" disabled>Ultra</button>
-              </div>
-            </div>
-
-            <!-- Months Option -->
-            <div class="form-group">
-              <label class="group-label">Months to Search (Optional) <span class="label-info-text">(next 3 months by default)</span></label>
-              <div class="chip-container scrollable-chips" id="monthChips">
-                <!-- Dynamically generated rolling 12 months in JavaScript -->
-              </div>
-            </div>
-          </div>
-
-          <!-- Bottom Action Row -->
-          <div class="action-row">
-            <div class="grounding-toggle-container">
-              <input type="checkbox" id="groundingToggle" checked disabled>
-              <label for="groundingToggle" class="disabled-label">Use Google Search Grounding</label>
-            </div>
-            <button type="submit" class="submit-btn" id="submitBtn" disabled>
-              <span class="btn-text">Let's find a race</span>
-              <span class="btn-icon">⚡</span>
-            </button>
-          </div>
-        </form>
+          </form>
+        </div>
       </section>
 
       <!-- Status and Results Area -->
       <section class="results-container" id="resultsContainer">
-        
+
         <!-- SSE Loading State -->
         <div class="loading-state card hidden" id="loadingState">
           <div class="spinner-container">
@@ -153,8 +172,10 @@
           <div class="card-icon">💳</div>
           <div class="card-content">
             <h3 class="error-title">Gemini API Prepay Credits Depleted</h3>
-            <p class="error-message">Your Google AI Studio prepayment account has run out of funds. Please top up your billing balance to restore Google Search Grounding capabilities.</p>
-            <a href="https://aistudio.google.com/projects" target="_blank" class="action-btn error-btn">Manage Billing in AI Studio</a>
+            <p class="error-message">Your Google AI Studio prepayment account has run out of funds. Please top up your
+              billing balance to restore Google Search Grounding capabilities.</p>
+            <a href="https://aistudio.google.com/projects" target="_blank" class="action-btn error-btn">Manage Billing
+              in AI Studio</a>
           </div>
         </div>
 
@@ -180,10 +201,13 @@
 
           <!-- Parkrun Fallback notice -->
           <div class="parkrun-fallback-banner hidden" id="parkrunFallbackBanner">
-            <div class="banner-icon">📍</div>
+            <div class="banner-icon">🤝</div>
             <div class="banner-body">
-              <h4>Parkrun Fallback Triggered</h4>
-              <p>No official races were found for your search criteria. Showing local Parkrun events instead — free, weekly, timed 5K runs held every Saturday morning! Walkers are welcome and you can complete the 5K at your own pace with absolutely no judgment.</p>
+              <h4>We've got you covered!</h4>
+              <p>I couldn't find any upcoming official entry races matching your criteria right now, but don't worry—you
+                are not alone! I found local Saturday morning Parkrun events instead. They are completely free,
+                incredibly welcoming weekly 5K runs. Walkers are warmly encouraged and you can finish at your own
+                comfortable pace with zero judgment. Let's start here!</p>
             </div>
           </div>
 
@@ -193,7 +217,8 @@
               <h2>🗺️ Live Event Map</h2>
             </div>
             <div class="map-container-relative">
-              <div id="map" style="height: 350px; border-radius: 12px; border: 1.5px solid var(--border-color); box-shadow: 0 0 15px rgba(0, 191, 255, 0.1); margin-top: 10px; margin-bottom: 20px; z-index: 10;">
+              <div id="map"
+                style="height: 350px; border-radius: 12px; border: 1.5px solid var(--theme-color); box-shadow: 0 0 15px var(--theme-glow-weak); margin-top: 10px; margin-bottom: 20px; z-index: 10;">
                 <div class="map-loader" id="mapLoader">
                   <div class="map-spinner"></div>
                   <span>Plotting events on map...</span>
@@ -219,12 +244,13 @@
                 <p id="historicalInsightText"></p>
               </div>
             </div>
-            
+
             <div class="section-header">
               <h2>📅 Races Typically Held Here</h2>
-              <p class="section-subtitle">These events are historically run in this region. Confirm dates with organizers directly.</p>
+              <p class="section-subtitle">These events are historically run in this region. Confirm dates with
+                organizers directly.</p>
             </div>
-            
+
             <div class="historical-races-list" id="historicalRacesList">
               <!-- Historical items dynamic insertion -->
             </div>
@@ -244,7 +270,8 @@
           <div class="parkrun-section hidden" id="parkrunSection">
             <div class="section-header">
               <h2 id="parkrunTitle">🏃 parkrun Events</h2>
-              <p class="section-subtitle">All parkrun events are free and welcome all abilities. You can walk, jog, or run the 5K with absolutely no judgment! Register once at parkrun.org.uk</p>
+              <p class="section-subtitle">All parkrun events are free and welcome all abilities. You can walk, jog, or
+                run the 5K with absolutely no judgment! Register once at parkrun.org.uk</p>
             </div>
             <div class="table-container">
               <table class="parkrun-table">
@@ -262,7 +289,8 @@
               </table>
             </div>
             <div class="parkrun-disclaimer">
-              All parkrun events require a one-time free registration barcode to be timed. Visit <a href="https://www.parkrun.org.uk/register/" target="_blank">parkrun.org.uk/register</a>.
+              All parkrun events require a one-time free registration barcode to be timed. Visit <a
+                href="https://www.parkrun.org.uk/register/" target="_blank">parkrun.org.uk/register</a>.
             </div>
           </div>
 
@@ -278,8 +306,10 @@
   </div>
 
   <!-- Leaflet Map JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <!-- Client JavaScript -->
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=1.2"></script>
 </body>
+
 </html>

@@ -21,6 +21,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const autocompleteSuggestions = document.getElementById('autocompleteSuggestions');
   const distanceChipsContainer = document.getElementById('distanceChips');
   const monthChipsContainer = document.getElementById('monthChips');
+  const formToggleHeader = document.getElementById('formToggleHeader');
+  const formCollapsibleBody = document.getElementById('formCollapsibleBody');
+  const formToggleIcon = document.getElementById('formToggleIcon');
 
   // Leaflet Map Globals
   let mapInstance = null;
@@ -115,32 +118,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 3. Level-Based UI Form Activation and Disabling flow
   if (levelStarter && levelRunner) {
-    levelStarter.addEventListener('change', handleLevelChange);
-    levelRunner.addEventListener('change', handleLevelChange);
+    levelStarter.addEventListener('change', validateFormState);
+    levelRunner.addEventListener('change', validateFormState);
   }
+  if (locationInput) {
+    locationInput.addEventListener('input', validateFormState);
+  }
+  validateFormState(); // Initialize states on page load
 
-  function handleLevelChange() {
+  function validateFormState() {
     const isStarterSelected = levelStarter.checked;
     const isRunnerSelected = levelRunner.checked;
+    const hasLevel = isStarterSelected || isRunnerSelected;
     
-    if (isStarterSelected || isRunnerSelected) {
-      // Enable location, grounding, and submit button
-      locationInput.disabled = false;
-      locationInput.placeholder = "e.g. Leeds, United Kingdom or Germany";
-      groundingToggle.disabled = false;
-      document.querySelector('.grounding-toggle-container label').classList.remove('disabled-label');
-      submitBtn.disabled = false;
+    // Toggle active theme classes on the body element
+    if (isStarterSelected) {
+      document.body.classList.remove('theme-runner');
+      document.body.classList.add('theme-starter');
+    } else if (isRunnerSelected) {
+      document.body.classList.remove('theme-starter');
+      document.body.classList.add('theme-runner');
+    } else {
+      document.body.classList.remove('theme-starter', 'theme-runner');
+    }
+    
+    const hasLocation = locationInput.value.trim().length > 0;
+    const shouldEnableOthers = hasLevel && hasLocation;
+    
+    // 2. Enable/Disable Month chips
+    monthChipsContainer.querySelectorAll('.chip').forEach(chip => {
+      chip.disabled = !shouldEnableOthers;
+      if (!shouldEnableOthers) {
+        chip.classList.remove('active');
+      }
+    });
 
-      // Enable Month chips
-      monthChipsContainer.querySelectorAll('.chip').forEach(chip => {
-        chip.disabled = false;
-      });
-
-      // Handle distance chips based on level
-      distanceChipsContainer.querySelectorAll('.chip').forEach(chip => {
-        const isAdvanced = chip.dataset.advanced === 'true';
-        chip.disabled = false; // Always enabled for both Starter and Runner
-        
+    // 3. Enable/Disable Distance chips
+    distanceChipsContainer.querySelectorAll('.chip').forEach(chip => {
+      const isAdvanced = chip.dataset.advanced === 'true';
+      chip.disabled = !shouldEnableOthers;
+      
+      if (shouldEnableOthers) {
         if (isStarterSelected) {
           if (isAdvanced) {
             chip.classList.add('not-recommended');
@@ -166,14 +184,30 @@ document.addEventListener('DOMContentLoaded', () => {
             chip.classList.add('active');
           }
         }
-      });
-
-      // Show/Hide Starter recommendation warning text
-      if (isStarterSelected) {
-        starterWarningText.classList.remove('hidden');
       } else {
-        starterWarningText.classList.add('hidden');
+        // If disabled, remove active states and warning markings so they don't look active when disabled
+        chip.classList.remove('active', 'warning-active', 'not-recommended');
+        chip.removeAttribute('title');
       }
+    });
+
+    // 4. Enable/Disable Grounding toggle and Submit button
+    groundingToggle.disabled = !shouldEnableOthers;
+    const toggleLabel = document.querySelector('.grounding-toggle-container label');
+    if (toggleLabel) {
+      if (shouldEnableOthers) {
+        toggleLabel.classList.remove('disabled-label');
+      } else {
+        toggleLabel.classList.add('disabled-label');
+      }
+    }
+    submitBtn.disabled = !shouldEnableOthers;
+
+    // 5. Show/Hide Starter recommendation warning text
+    if (isStarterSelected && shouldEnableOthers) {
+      starterWarningText.classList.remove('hidden');
+    } else {
+      starterWarningText.classList.add('hidden');
     }
   }
 
@@ -323,6 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
       item.addEventListener('click', () => {
         locationInput.value = label;
         autocompleteSuggestions.classList.add('hidden');
+        validateFormState();
       });
 
       autocompleteSuggestions.appendChild(item);
@@ -408,12 +443,25 @@ document.addEventListener('DOMContentLoaded', () => {
       levelRunner.checked = true;
     }
     
-    // Trigger activation of inputs and constraints first
-    handleLevelChange();
-
+    // Set location first so validation enables the chips properly
     locationInput.value = item.location;
+    
+    // Trigger activation of inputs and constraints
+    validateFormState();
+
     setSelectedChips('distanceChips', item.distance);
     setSelectedChips('monthChips', item.month);
+    
+    // Instantly load cached report results if they exist in localStorage history item
+    if (item.report) {
+      welcomeBanner.classList.add('hidden');
+      resultsContainer.classList.remove('hidden');
+      loadingState.classList.add('hidden');
+      billingError.classList.add('hidden');
+      generalError.classList.add('hidden');
+      
+      renderReport(item.report);
+    }
     
     searchForm.scrollIntoView({ behavior: 'smooth' });
     sidebar.classList.remove('open');
@@ -427,6 +475,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Collapsible Search Form header toggle
+  if (formToggleHeader && formCollapsibleBody) {
+    formToggleHeader.addEventListener('click', () => {
+      const isExpanded = formCollapsibleBody.classList.contains('expanded');
+      if (isExpanded) {
+        formCollapsibleBody.classList.remove('expanded');
+        if (formToggleIcon) formToggleIcon.textContent = '+';
+      } else {
+        formCollapsibleBody.classList.add('expanded');
+        if (formToggleIcon) formToggleIcon.textContent = '−';
+      }
+    });
+  }
+
+  let currentSearchQuery = null;
+
   // 7. Submit Form & SSE Stream Handling
   searchForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -438,6 +502,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const no_grounding = !groundingToggle.checked;
 
     if (!location) return;
+
+    // Capture the current search query criteria to pair with results later
+    currentSearchQuery = { level, location, distance, month };
 
     // Reset UI states
     welcomeBanner.classList.add('hidden');
@@ -451,10 +518,8 @@ document.addEventListener('DOMContentLoaded', () => {
     submitBtn.disabled = true;
     submitBtn.classList.add('loading');
 
-    statusTitle.textContent = "RunMate is thinking...";
-    statusDetail.textContent = "Spinning up agents";
-
-    saveHistoryItem({ level, location, distance, month });
+    statusTitle.textContent = "Lacing up our running shoes...";
+    statusDetail.textContent = "RunMate is getting ready to jog...";
 
     try {
       const response = await fetch('/api/search', {
@@ -506,18 +571,29 @@ document.addEventListener('DOMContentLoaded', () => {
     if (event.type === 'status') {
       statusDetail.textContent = event.message;
       if (event.message.includes('Searching')) {
-        statusTitle.textContent = "🔍 Crawling running databases...";
+        statusTitle.textContent = "🏃 Jogging around the web to find the best local races...";
       } else if (event.message.includes('recommendations')) {
-        statusTitle.textContent = "⭐ Evaluating best options...";
+        statusTitle.textContent = "⭐ Designing the perfect outlines for you...";
       } else if (event.message.includes('parkrun')) {
-        statusTitle.textContent = "🗺️ Mapping local weekly 5Ks...";
+        statusTitle.textContent = "🗺️ Mapping out free, friendly Saturday parkruns...";
       } else if (event.message.includes('Resolving') || event.message.includes('Analyzing')) {
-        statusTitle.textContent = "🤔 Planning search paths...";
+        statusTitle.textContent = "🤔 Planning our route path together...";
       }
     } 
     else if (event.type === 'result') {
       loadingState.classList.add('hidden');
       renderReport(event.report);
+      
+      // Save search report and criteria parameters to history
+      if (currentSearchQuery) {
+        saveHistoryItem({
+          level: currentSearchQuery.level,
+          location: currentSearchQuery.location,
+          distance: currentSearchQuery.distance,
+          month: currentSearchQuery.month,
+          report: event.report
+        });
+      }
     } 
     else if (event.type === 'error') {
       loadingState.classList.add('hidden');
@@ -537,6 +613,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // 9. Render Report Output HTML with Upgraded Styling & Shorter URLs
   function renderReport(report) {
     reportContent.classList.remove('hidden');
+    
+    // Automatically collapse the search form box to focus on map & results
+    if (formCollapsibleBody) {
+      formCollapsibleBody.classList.remove('expanded');
+      if (formToggleIcon) formToggleIcon.textContent = '+';
+    }
+
     initAndPlotMap(report);
 
     const p = report.profile;
@@ -1008,8 +1091,8 @@ document.addEventListener('DOMContentLoaded', () => {
       shadowSize: [41, 41]
     });
 
-    const blueMarkerIcon = new L.Icon({
-      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+    const orangeMarkerIcon = new L.Icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png',
       shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
       iconSize: [25, 41],
       iconAnchor: [12, 41],
@@ -1020,7 +1103,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add points to map
     pointsToPlot.forEach(point => {
       const marker = L.marker([point.lat, point.lon], {
-        icon: point.is_parkrun ? blueMarkerIcon : greenMarkerIcon
+        icon: point.is_parkrun ? orangeMarkerIcon : greenMarkerIcon
       });
 
       // Save marker reference
@@ -1029,7 +1112,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const popupContent = `
         <div style="font-family: 'Inter', sans-serif; font-size: 13px; color: #091124; line-height: 1.4;">
-          <strong style="font-family: 'Outfit', sans-serif; font-size: 14px; display: block; margin-bottom: 2px; color: #0044ff;">${point.name}</strong>
+          <strong style="font-family: 'Outfit', sans-serif; font-size: 14px; display: block; margin-bottom: 2px; color: ${point.is_parkrun ? '#e65100' : '#2e7d32'};">${point.name}</strong>
           <span>${point.info}</span>
         </div>
       `;

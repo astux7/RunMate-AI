@@ -39,7 +39,7 @@ IMPORTANT: When standard distances are requested (like 10K or Half Marathon), yo
 - CRITICAL: Always search for and return the direct booking, entry, registration page, or the official organizer's event page (e.g., from `racebest.com`, `runbritain.com`, or the club's own website) instead of general aggregator calendar listings (like `runningcalendar.co.uk` or `findarace.com`) if the direct link is available.
 - CRITICAL: The user's message includes "Today's date". ONLY return races whose date is strictly AFTER that date. Never return a race that has already happened.
 - If a race in the search results falls before today's date, skip it entirely.
-- Prefer races near the specified location, but include nearby county races if local options are sparse.
+- CRITICAL: Prioritize races that are physically located in the exact target city/location requested. Only include races in surrounding cities/counties (within 30 miles) as fallbacks when target city events are sparse.
 - Do not include virtual races or club training sessions.
 - Do not filter out races just because their distance is non-standard (e.g. accept a 7-mile or 10-mile race if 10K/Half Marathon was queried).
 - It is better to return 3 real races than 0. Keep searching until you find something.
