@@ -4,42 +4,42 @@
   --font-family-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-family-display: 'Outfit', var(--font-family-sans);
 
-  /* Sonic bluish theme palette */
-  --bg-app: #f0f6fc;
-  --bg-sidebar: #ffffff;
-  --bg-card: #ffffff;
-  --bg-hover: #e1effe;
+  /* Premium Dark Blue Theme Palette */
+  --bg-app: #080f26;
+  --bg-sidebar: #0d173c;
+  --bg-card: #121e4b;
+  --bg-hover: #1e2c69;
   
-  --border-color: #d0d7de;
-  --border-focus: #0044ff;
+  --border-color: #24377a;
+  --border-focus: #00f0ff;
   
-  --text-main: #091124;
-  --text-muted: #3b4b6b;
-  --text-light: #6e7f9f;
+  --text-main: #f1f5f9;
+  --text-muted: #cbd5e1;
+  --text-light: #94a3b8;
   
   /* Sonic accents */
   --accent-blue: #0044ff;
-  --accent-blue-hover: #0033cc;
-  --accent-blue-light: #e6eeff;
+  --accent-blue-hover: #3b82f6;
+  --accent-blue-light: #0d1e3d;
   
   --accent-cyan: #00bfff;
-  --accent-cyan-hover: #0099cc;
-  --accent-cyan-light: #e6f7ff;
-  --accent-cyan-border: #bae6ff;
+  --accent-cyan-hover: #38bdf8;
+  --accent-cyan-light: #0c2049;
+  --accent-cyan-border: #1f3970;
   
-  --accent-green: #0ea5e9;
-  --accent-green-hover: #0284c7;
-  --accent-green-light: #f0f9ff;
-  --accent-green-border: #e0f2fe;
+  --accent-green: #10b981;
+  --accent-green-hover: #34d399;
+  --accent-green-light: #062e1a;
+  --accent-green-border: #10b981;
   
   /* Rings / Gold medals theme */
   --accent-yellow: #eab308;
-  --accent-yellow-light: #fefbeb;
-  --accent-yellow-border: #fef08a;
+  --accent-yellow-light: #2a2205;
+  --accent-yellow-border: #eab308;
   
   --accent-red: #ef4444;
-  --accent-red-light: #fef2f2;
-  --accent-red-border: #fee2e2;
+  --accent-red-light: #2e0b0b;
+  --accent-red-border: #ef4444;
 
   --shadow-sm: 0 1px 3px 0 rgba(0, 68, 255, 0.05);
   --shadow-md: 0 4px 12px -2px rgba(0, 68, 255, 0.08), 0 2px 6px -1px rgba(0, 68, 255, 0.04);
@@ -48,6 +48,22 @@
   
   --sidebar-width: 320px;
   --transition-speed: 0.25s;
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-app);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-cyan);
 }
 
 /* Base resets */
@@ -352,7 +368,7 @@ a:hover {
 
 /* Welcome Banner */
 .welcome-banner {
-  background: linear-gradient(135deg, var(--accent-blue-light), #f0fdfa);
+  background: linear-gradient(135deg, var(--bg-card), #0c2049);
   border: 1px solid var(--border-color);
   border-radius: 16px;
   padding: 32px;
@@ -383,7 +399,7 @@ a:hover {
 
 .form-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 20px;
   margin-bottom: 24px;
 }
@@ -392,9 +408,6 @@ a:hover {
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-.form-group.level-group {
-  grid-column: span 2;
 }
 
 .group-label {
@@ -436,22 +449,22 @@ a:hover {
   border-width: 2px;
 }
 .level-selector input[type="radio"]:checked + .starter-label {
-  background-color: var(--accent-green-light);
-  border-color: var(--accent-green);
-  color: var(--accent-green-hover);
+  background-color: #064e3b;
+  border-color: #10b981;
+  color: #34d399;
 }
 .level-selector input[type="radio"]:checked + .starter-label .bullet {
-  background-color: var(--accent-green);
-  border-color: var(--accent-green);
+  background-color: #10b981;
+  border-color: #10b981;
 }
 .level-selector input[type="radio"]:checked + .runner-label {
-  background-color: var(--accent-cyan-light);
-  border-color: var(--accent-cyan);
-  color: #0891b2;
+  background-color: #083344;
+  border-color: #00bfff;
+  color: #22d3ee;
 }
 .level-selector input[type="radio"]:checked + .runner-label .bullet {
-  background-color: var(--accent-cyan);
-  border-color: var(--accent-cyan);
+  background-color: #00bfff;
+  border-color: #00bfff;
 }
 
 /* Text Inputs */
@@ -1095,18 +1108,20 @@ input:disabled {
 
 /* Richer colors for recommendations and summaries */
 .rec-card.rec-official {
-  border: 1.5px solid #bfe3ff !important;
-  background: linear-gradient(180deg, #ffffff 0%, #e6f7ff 100%) !important;
-  box-shadow: 0 4px 14px rgba(0, 191, 255, 0.08) !important;
+  border: 1.5px solid #00bfff !important;
+  background: linear-gradient(180deg, var(--bg-card) 0%, #0c1a3d 100%) !important;
+  box-shadow: 0 4px 14px rgba(0, 191, 255, 0.15) !important;
+  color: var(--text-main) !important;
 }
 .rec-card.rec-parkrun {
-  border: 1.5px solid #fef08a !important;
-  background: linear-gradient(180deg, #ffffff 0%, #fefbeb 100%) !important;
-  box-shadow: 0 4px 14px rgba(234, 179, 8, 0.06) !important;
+  border: 1.5px solid #facc15 !important;
+  background: linear-gradient(180deg, var(--bg-card) 0%, #201a08 100%) !important;
+  box-shadow: 0 4px 14px rgba(234, 179, 8, 0.12) !important;
+  color: var(--text-main) !important;
 }
 .summary-card.profile-summary-card {
-  border: 1.5px solid #bae6ff !important;
-  background-color: #e6f7ff !important;
+  border: 1.5px solid #0044ff !important;
+  background-color: #0d1a3f !important;
 }
 
 /* Short URL Action button styling */
