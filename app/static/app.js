@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (isStarterSelected || isRunnerSelected) {
       // Enable location, grounding, and submit button
       locationInput.disabled = false;
-      locationInput.placeholder = "e.g. United Kingdom";
+      locationInput.placeholder = "e.g. Leeds, United Kingdom or Germany";
       groundingToggle.disabled = false;
       document.querySelector('.grounding-toggle-container label').classList.remove('disabled-label');
       submitBtn.disabled = false;
@@ -257,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function fetchLocationSuggestions(query) {
     try {
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&featuretype=country&addressdetails=1&limit=5`;
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=5`;
       const response = await fetch(url, {
         headers: {
           'Accept-Language': 'en-US,en;q=0.9',
@@ -282,15 +282,18 @@ document.addEventListener('DOMContentLoaded', () => {
     autocompleteSuggestions.classList.remove('hidden');
 
     places.forEach(place => {
+      const city = place.address.city || place.address.town || place.address.municipality || place.address.village;
       const country = place.address.country || place.display_name;
       if (!country) return;
 
+      const label = city ? `${city}, ${country}` : country;
+
       const item = document.createElement('div');
       item.className = 'autocomplete-suggestion';
-      item.innerHTML = `📍 <span>${country}</span>`;
+      item.innerHTML = `📍 <span>${label}</span>`;
       
       item.addEventListener('click', () => {
-        locationInput.value = country;
+        locationInput.value = label;
         autocompleteSuggestions.classList.add('hidden');
       });
 
