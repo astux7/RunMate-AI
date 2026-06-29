@@ -100,7 +100,7 @@
             <div class="form-group level-group">
               <label class="group-label">Experience Level</label>
               <div class="level-selector">
-                <input type="radio" name="level" id="levelStarter" value="STARTER" checked>
+                <input type="radio" name="level" id="levelStarter" value="STARTER">
                 <label for="levelStarter" class="level-label starter-label">
                   <span class="bullet"></span>
                   <span class="text">Starter</span>
@@ -119,38 +119,31 @@
               <label for="locationInput" class="group-label">Target Location</label>
               <div class="input-wrapper location-wrapper">
                 <span class="input-icon">📍</span>
-                <input type="text" id="locationInput" placeholder="Leeds, United Kingdom" required autocomplete="off">
+                <input type="text" id="locationInput" placeholder="Select experience level first..." required autocomplete="off" disabled>
+                <div class="autocomplete-suggestions hidden" id="autocompleteSuggestions"></div>
               </div>
             </div>
 
             <!-- Distances Option -->
             <div class="form-group">
               <label class="group-label">Preferred Distances (Optional)</label>
+              <div class="starter-warning-text hidden" id="starterWarningText">
+                💡 We recommend starting with <strong>5K</strong> or <strong>10K</strong> distances to build your base safely. Longer distances (Half Marathon, Marathon, Ultra) are not recommended at the Starter level.
+              </div>
               <div class="chip-container" id="distanceChips">
-                <button type="button" class="chip" data-value="5K">5K</button>
-                <button type="button" class="chip" data-value="10K">10K</button>
-                <button type="button" class="chip" data-value="Half Marathon">Half Marathon</button>
-                <button type="button" class="chip" data-value="Marathon">Marathon</button>
-                <button type="button" class="chip" data-value="Ultra">Ultra</button>
+                <button type="button" class="chip" data-value="5K" disabled>5K</button>
+                <button type="button" class="chip" data-value="10K" disabled>10K</button>
+                <button type="button" class="chip" data-value="Half Marathon" data-advanced="true" disabled>Half Marathon</button>
+                <button type="button" class="chip" data-value="Marathon" data-advanced="true" disabled>Marathon</button>
+                <button type="button" class="chip" data-value="Ultra" data-advanced="true" disabled>Ultra</button>
               </div>
             </div>
 
             <!-- Months Option -->
             <div class="form-group">
-              <label class="group-label">Months to Search (Optional)</label>
+              <label class="group-label">Months to Search (Optional) <span class="label-info-text">(next 3 months by default)</span></label>
               <div class="chip-container scrollable-chips" id="monthChips">
-                <button type="button" class="chip" data-value="January">Jan</button>
-                <button type="button" class="chip" data-value="February">Feb</button>
-                <button type="button" class="chip" data-value="March">Mar</button>
-                <button type="button" class="chip" data-value="April">Apr</button>
-                <button type="button" class="chip" data-value="May">May</button>
-                <button type="button" class="chip" data-value="June">Jun</button>
-                <button type="button" class="chip" data-value="July">Jul</button>
-                <button type="button" class="chip" data-value="August">Aug</button>
-                <button type="button" class="chip" data-value="September">Sep</button>
-                <button type="button" class="chip" data-value="October">Oct</button>
-                <button type="button" class="chip" data-value="November">Nov</button>
-                <button type="button" class="chip" data-value="December">Dec</button>
+                <!-- Dynamically generated rolling 12 months in JavaScript -->
               </div>
             </div>
           </div>
@@ -158,10 +151,10 @@
           <!-- Bottom Action Row -->
           <div class="action-row">
             <div class="grounding-toggle-container">
-              <input type="checkbox" id="groundingToggle" checked>
-              <label for="groundingToggle">Use Google Search Grounding</label>
+              <input type="checkbox" id="groundingToggle" checked disabled>
+              <label for="groundingToggle" class="disabled-label">Use Google Search Grounding</label>
             </div>
-            <button type="submit" class="submit-btn" id="submitBtn">
+            <button type="submit" class="submit-btn" id="submitBtn" disabled>
               <span class="btn-text">Let's find a race</span>
               <span class="btn-icon">⚡</span>
             </button>

@@ -14,6 +14,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const welcomeBanner = document.getElementById('welcomeBanner');
   const resultsContainer = document.getElementById('resultsContainer');
   
+  // Dynamic UI Control Elements
+  const levelStarter = document.getElementById('levelStarter');
+  const levelRunner = document.getElementById('levelRunner');
+  const starterWarningText = document.getElementById('starterWarningText');
+  const autocompleteSuggestions = document.getElementById('autocompleteSuggestions');
+  const distanceChipsContainer = document.getElementById('distanceChips');
+  const monthChipsContainer = document.getElementById('monthChips');
+
   // States
   const loadingState = document.getElementById('loadingState');
   const billingError = document.getElementById('billingError');
@@ -62,7 +70,103 @@ document.addEventListener('DOMContentLoaded', () => {
     closeSidebarBtn.addEventListener('click', () => sidebar.classList.remove('open'));
   }
 
-  // 2. Chip Selectors (Toggles)
+  // 2. Generate Rolling 12 Months starting from current month/year dynamically
+  generateMonthChips();
+
+  function generateMonthChips() {
+    if (!monthChipsContainer) return;
+    monthChipsContainer.innerHTML = '';
+    
+    // Use the current system date context
+    const now = new Date();
+    const startMonth = now.getMonth(); // 0-11
+    const startYear = now.getFullYear();
+    
+    const monthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+
+    for (let i = 0; i < 12; i++) {
+      const currentMonthIndex = (startMonth + i) % 12;
+      const yearOffset = Math.floor((startMonth + i) / 12);
+      const year = startYear + yearOffset;
+      
+      const monthName = monthNames[currentMonthIndex];
+      const displayAbbr = monthName.substring(0, 3);
+      
+      // Label next year's months clearly (e.g. "Jan '27")
+      const displayLabel = year !== startYear 
+        ? `${displayAbbr} '${String(year).substring(2)}`
+        : displayAbbr;
+
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'chip';
+      chip.dataset.value = monthName;
+      chip.textContent = displayLabel;
+      chip.disabled = true; // disabled initially until level is selected
+      
+      monthChipsContainer.appendChild(chip);
+    }
+  }
+
+  // 3. Level-Based UI Form Activation and Disabling flow
+  if (levelStarter && levelRunner) {
+    levelStarter.addEventListener('change', handleLevelChange);
+    levelRunner.addEventListener('change', handleLevelChange);
+  }
+
+  function handleLevelChange() {
+    const isStarterSelected = levelStarter.checked;
+    const isRunnerSelected = levelRunner.checked;
+    
+    if (isStarterSelected || isRunnerSelected) {
+      // Enable location, grounding, and submit button
+      locationInput.disabled = false;
+      locationInput.placeholder = "Leeds, United Kingdom";
+      groundingToggle.disabled = false;
+      document.querySelector('.grounding-toggle-container label').classList.remove('disabled-label');
+      submitBtn.disabled = false;
+
+      // Enable Month chips
+      monthChipsContainer.querySelectorAll('.chip').forEach(chip => {
+        chip.disabled = false;
+      });
+
+      // Handle distance chips based on level
+      distanceChipsContainer.querySelectorAll('.chip').forEach(chip => {
+        const isAdvanced = chip.dataset.advanced === 'true';
+        
+        if (isStarterSelected) {
+          if (isAdvanced) {
+            chip.disabled = true;
+            chip.classList.remove('active');
+            chip.classList.add('red-marked');
+            chip.title = "Not recommended for Starter level";
+          } else {
+            chip.disabled = false;
+            chip.classList.remove('red-marked');
+            chip.removeAttribute('title');
+          }
+        } else {
+          // RUNNER selected - all options enabled normally
+          chip.disabled = false;
+          chip.classList.remove('red-marked');
+          chip.removeAttribute('title');
+        }
+      });
+
+      // Show/Hide Starter recommendation warning text
+      if (isStarterSelected) {
+        starterWarningText.classList.remove('hidden');
+      } else {
+        starterWarningText.classList.add('hidden');
+      }
+    }
+  }
+
+  // Set up chip selection handler
   setupChips('distanceChips');
   setupChips('monthChips');
 
@@ -70,9 +174,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const container = document.getElementById(containerId);
     if (!container) return;
     container.addEventListener('click', (e) => {
-      if (e.target.classList.contains('chip')) {
+      const chip = e.target;
+      if (chip.classList.contains('chip')) {
         e.preventDefault();
-        e.target.classList.toggle('active');
+        // Prevent selection of disabled or red-marked chips
+        if (chip.disabled || chip.classList.contains('red-marked')) {
+          return;
+        }
+        chip.classList.toggle('active');
       }
     });
   }
@@ -97,36 +206,104 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!container || !values) return;
     clearSelectedChips(containerId);
     container.querySelectorAll('.chip').forEach(chip => {
-      if (values.includes(chip.dataset.value)) {
+      if (values.includes(chip.dataset.value) && !chip.disabled && !chip.classList.contains('red-marked')) {
         chip.classList.add('active');
       }
     });
   }
 
-  // 3. Persistent Runner Profile Settings (Local Storage)
+  // 4. OpenStreetMap Autocomplete Location Suggest
+  let debounceTimeout;
+  if (locationInput) {
+    locationInput.addEventListener('input', () => {
+      clearTimeout(debounceTimeout);
+      const query = locationInput.value.trim();
+      
+      if (query.length < 3) {
+        autocompleteSuggestions.classList.add('hidden');
+        return;
+      }
+
+      debounceTimeout = setTimeout(() => {
+        fetchLocationSuggestions(query);
+      }, 300);
+    });
+
+    // Hide dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (e.target !== locationInput && e.target !== autocompleteSuggestions) {
+        autocompleteSuggestions.classList.add('hidden');
+      }
+    });
+  }
+
+  async function fetchLocationSuggestions(query) {
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=5`;
+      const response = await fetch(url, {
+        headers: {
+          'Accept-Language': 'en-US,en;q=0.9',
+          'User-Agent': 'RunMate-AI-Webapp/1.0'
+        }
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+      renderSuggestions(data);
+    } catch (err) {
+      console.error("Autocomplete fetch error:", err);
+    }
+  }
+
+  function renderSuggestions(places) {
+    if (!places || places.length === 0) {
+      autocompleteSuggestions.classList.add('hidden');
+      return;
+    }
+
+    autocompleteSuggestions.innerHTML = '';
+    autocompleteSuggestions.classList.remove('hidden');
+
+    places.forEach(place => {
+      const city = place.address.city || place.address.town || place.address.municipality || place.address.village;
+      const country = place.address.country;
+      
+      if (!country) return;
+
+      const label = city ? `${city}, ${country}` : place.display_name;
+
+      const item = document.createElement('div');
+      item.className = 'autocomplete-suggestion';
+      item.innerHTML = `📍 <span>${label}</span>`;
+      
+      item.addEventListener('click', () => {
+        locationInput.value = label;
+        autocompleteSuggestions.classList.add('hidden');
+      });
+
+      autocompleteSuggestions.appendChild(item);
+    });
+  }
+
+  // 5. Persistent Runner Profile Settings (Local Storage)
   profileInputs.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    // Load
     const stored = localStorage.getItem(id);
     if (stored !== null) el.value = stored;
-    // Save
     el.addEventListener('input', () => {
       localStorage.setItem(id, el.value);
     });
   });
 
-  // 4. Search History Management
+  // 6. Search History Management
   let searchHistory = JSON.parse(localStorage.getItem('runmate_history') || '[]');
   renderHistoryList();
 
   function saveHistoryItem(item) {
-    // Remove if already exists to place at front
     searchHistory = searchHistory.filter(h => 
       !(h.location.toLowerCase() === item.location.toLowerCase() && h.level === item.level)
     );
     searchHistory.unshift(item);
-    // Keep max 10
     if (searchHistory.length > 10) searchHistory.pop();
     localStorage.setItem('runmate_history', JSON.stringify(searchHistory));
     renderHistoryList();
@@ -180,20 +357,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function loadHistoryItem(item) {
-    // Fill fields
     if (item.level === 'STARTER') {
-      document.getElementById('levelStarter').checked = true;
+      levelStarter.checked = true;
     } else {
-      document.getElementById('levelRunner').checked = true;
+      levelRunner.checked = true;
     }
+    
+    // Trigger activation of inputs and constraints first
+    handleLevelChange();
+
     locationInput.value = item.location;
     setSelectedChips('distanceChips', item.distance);
     setSelectedChips('monthChips', item.month);
     
-    // Auto-scroll to search form or submit
     searchForm.scrollIntoView({ behavior: 'smooth' });
-    
-    // Close sidebar on mobile
     sidebar.classList.remove('open');
   }
 
@@ -205,7 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 5. Submit Form & Handle Stream
+  // 7. Submit Form & SSE Stream Handling
   searchForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -232,7 +409,6 @@ document.addEventListener('DOMContentLoaded', () => {
     statusTitle.textContent = "RunMate is thinking...";
     statusDetail.textContent = "Spinning up agents";
 
-    // Save to history
     saveHistoryItem({ level, location, distance, month });
 
     try {
@@ -246,7 +422,6 @@ document.addEventListener('DOMContentLoaded', () => {
         throw new Error(`Server returned HTTP ${response.status}`);
       }
 
-      // Read SSE stream
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
@@ -256,10 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
-        
-        // Parse complete SSE events
         const lines = buffer.split('\n\n');
-        // Keep the last partial event in the buffer
         buffer = lines.pop();
 
         for (const line of lines) {
@@ -284,7 +456,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 6. Handle SSE Events
+  // 8. Handle SSE Events
   function handlePipelineEvent(event) {
     if (event.type === 'status') {
       statusDetail.textContent = event.message;
@@ -317,14 +489,13 @@ document.addEventListener('DOMContentLoaded', () => {
     errorMessageText.textContent = msg;
   }
 
-  // 7. Render Report Output HTML
+  // 9. Render Report Output HTML with Upgraded Styling & Shorter URLs
   function renderReport(report) {
     reportContent.classList.remove('hidden');
 
     const p = report.profile;
     const cd = report.coach_decision;
     
-    // Fill profile card
     resLevel.textContent = p.level;
     resLevel.className = `detail-val ${p.level.toLowerCase() === 'starter' ? 'starter-badge' : 'runner-badge'}`;
     resLocation.textContent = p.location;
@@ -394,11 +565,13 @@ document.addEventListener('DOMContentLoaded', () => {
         grid.appendChild(createDetailItem('🏃', 'Distance:', race.distance));
         
         if (race.url) {
-          const urlLink = document.createElement('a');
-          urlLink.href = race.url;
-          urlLink.target = '_blank';
-          urlLink.textContent = race.url.length > 40 ? race.url.substring(0, 37) + '...' : race.url;
-          grid.appendChild(createDetailItem('🔗', 'URL:', urlLink));
+          const urlBtn = document.createElement('a');
+          urlBtn.href = race.url;
+          urlBtn.target = '_blank';
+          urlBtn.className = 'rec-action-link';
+          urlBtn.innerHTML = `${race.is_parkrun ? 'Open parkrun' : 'Visit Official Website'} ↗`;
+          
+          grid.appendChild(createDetailItem('🔗', 'Registration:', urlBtn));
         }
         
         card.appendChild(grid);
@@ -420,7 +593,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (report.historical_races && report.historical_races.length > 0) {
       historicalSection.classList.remove('hidden');
       
-      // Insight text
       if (report.historical_insight) {
         document.getElementById('historicalInsightCard').classList.remove('hidden');
         document.getElementById('historicalInsightText').textContent = report.historical_insight;
@@ -430,7 +602,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('historicalInsightCard').classList.add('hidden');
       }
 
-      // Races list
       historicalRacesList.innerHTML = '';
       report.historical_races.forEach(race => {
         const card = document.createElement('div');
@@ -450,7 +621,9 @@ document.addEventListener('DOMContentLoaded', () => {
           const l = document.createElement('a');
           l.href = race.url;
           l.target = '_blank';
-          l.textContent = race.url;
+          l.className = 'rec-action-link';
+          l.innerHTML = 'Visit Event Page ↗';
+          
           details.appendChild(createDetailItem('🔗', 'Website:', l));
         }
         card.appendChild(details);
@@ -465,7 +638,6 @@ document.addEventListener('DOMContentLoaded', () => {
         historicalRacesList.appendChild(card);
       });
 
-      // Travel tip
       if (report.travel_tip) {
         travelTipCard.classList.remove('hidden');
         travelTipText.textContent = report.travel_tip;
@@ -500,7 +672,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const a = document.createElement('a');
         a.href = event.url;
         a.target = '_blank';
-        a.textContent = 'View event page';
+        a.className = 'rec-action-link';
+        a.style.padding = '4px 10px';
+        a.style.fontSize = '11px';
+        a.innerHTML = 'View page ↗';
+        
         tdLink.appendChild(a);
         
         tr.appendChild(tdIdx);
@@ -514,17 +690,14 @@ document.addEventListener('DOMContentLoaded', () => {
       parkrunSection.classList.add('hidden');
     }
 
-    // Disclaimer
     resDisclaimer.textContent = report.disclaimer;
     
-    // Show fallback notice
     if (report.used_parkrun_fallback && (!report.historical_races || report.historical_races.length === 0)) {
       parkrunFallbackBanner.classList.remove('hidden');
     } else {
       parkrunFallbackBanner.classList.add('hidden');
     }
     
-    // Auto-scroll to results
     resultsContainer.scrollIntoView({ behavior: 'smooth' });
   }
 

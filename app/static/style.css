@@ -1004,6 +1004,125 @@ a:hover {
   font-style: italic;
 }
 
+/* --- Added Web UX Improvements & Autocomplete --- */
+
+.autocomplete-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  margin-top: 4px;
+}
+.autocomplete-suggestion {
+  padding: 10px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color var(--transition-speed);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.autocomplete-suggestion:hover {
+  background-color: var(--bg-hover);
+}
+
+/* Disabled Form States */
+input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #f1f5f9 !important;
+}
+.chip:disabled, button.chip[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+  background-color: #f1f5f9 !important;
+}
+.submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #94a3b8 !important;
+  box-shadow: none;
+}
+.disabled-label {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Starter warnings and red markings */
+.starter-warning-text {
+  background-color: var(--accent-green-light);
+  border: 1px solid var(--accent-green-border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+.chip.red-marked {
+  border-color: #f87171 !important;
+  color: #dc2626 !important;
+  background-color: #fef2f2 !important;
+  text-decoration: line-through !important;
+  opacity: 0.75 !important;
+  cursor: not-allowed !important;
+}
+.chip.red-marked:hover {
+  background-color: #fee2e2 !important;
+}
+
+.label-info-text {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-light);
+  margin-left: 4px;
+}
+
+/* Richer colors for recommendations and summaries */
+.rec-card.rec-official {
+  border: 1.5px solid #a5f3fc !important;
+  background: linear-gradient(180deg, #ffffff 0%, #ecfeff 100%) !important;
+  box-shadow: 0 4px 14px rgba(6, 182, 212, 0.06) !important;
+}
+.rec-card.rec-parkrun {
+  border: 1.5px solid #fef08a !important;
+  background: linear-gradient(180deg, #ffffff 0%, #fefbeb 100%) !important;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.06) !important;
+}
+.summary-card.profile-summary-card {
+  border: 1.5px solid #bae6fd !important;
+  background-color: #f0f9ff !important;
+}
+
+/* Short URL Action button styling */
+.rec-action-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--accent-blue);
+  color: white !important;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background-color var(--transition-speed);
+  text-decoration: none !important;
+  box-shadow: var(--shadow-sm);
+  margin-top: 2px;
+}
+.rec-action-link:hover {
+  background-color: var(--accent-blue-hover);
+  text-decoration: none !important;
+}
+
 /* Animations */
 @keyframes spin {
   0% { transform: rotate(0deg); }
