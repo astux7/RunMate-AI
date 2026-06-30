@@ -328,6 +328,163 @@ def test_race_type_classification_and_serialization():
     assert data_pk["is_parkrun"] is True
 
 
+def test_runner_profile_validation():
+    """
+    Test RunnerProfile validation rules (Pydantic model input normalization and validations).
+    """
+    from models.runner import RunnerLevel
+    # 1. Normalization of level uppercase
+    p1 = RunnerProfile(level="starter", location="Leeds, UK")
+    assert p1.level == RunnerLevel.STARTER
+
+    p2 = RunnerProfile(level="runner", location="Leeds, UK")
+    assert p2.level == RunnerLevel.RUNNER
+
+    # 2. Empty location validation error
+    with pytest.raises(ValueError, match="location must not be empty"):
+        RunnerProfile(level="STARTER", location=" ")
+
+    # 3. raw CLI input parsing for distances and months
+    p3 = RunnerProfile(level="STARTER", location="Leeds, UK", distance="5K, 10K, Marathon", month="april, october")
+    assert p3.distances == ["5K", "10K", "Marathon"]
+    assert p3.months == ["April", "October"]
+
+    # 4. Empty/Null distance and month handling
+    p4 = RunnerProfile(level="STARTER", location="Leeds, UK")
+    assert p4.distances == []
+    assert p4.months == []
+
+
+def test_coach_decision_model():
+    """
+    Test CoachDecision model attributes and serialization.
+    """
+    from models.runner import CoachDecision
+    cd = CoachDecision(
+        distances=["5K", "10K"],
+        months_to_search=["April"],
+        beginner_guidance="Warm up before running.",
+        reasoning="Good distance split."
+    )
+    assert cd.distances == ["5K", "10K"]
+    assert cd.months_to_search == ["April"]
+    assert cd.beginner_guidance == "Warm up before running."
+    assert cd.reasoning == "Good distance split."
+
+    dump = cd.model_dump() if hasattr(cd, "model_dump") else cd.dict()
+    assert dump["distances"] == ["5K", "10K"]
+    assert dump["months_to_search"] == ["April"]
+
+
+def test_recommendation_agent_mocking():
+    """
+    Test that RecommendationAgent correctly calls the client and parses
+    its JSON recommendations response into Recommendation models sorted by rank.
+    """
+    from agents.recommendation_agent import RecommendationAgent
+    from models.runner import CoachDecision
+    import json
+
+    client_mock = MagicMock()
+    # Mock return response structure
+    mock_response = MagicMock()
+    mock_response.text = json.dumps({
+        "recommendations": [
+            {
+                "race": {
+                    "name": "Leeds Abbey Dash",
+                    "location": "Leeds, UK",
+                    "date": "2026-10-25",
+                    "distance": "10K",
+                    "url": "https://leeds-dash.com",
+                    "is_parkrun": False
+                },
+                "rank": 2,
+                "explanation": "Second best choice."
+            },
+            {
+                "race": {
+                    "name": "Woodhouse Moor parkrun",
+                    "location": "Leeds, UK",
+                    "date": "Weekly Saturday",
+                    "distance": "5K",
+                    "url": "https://parkrun.org",
+                    "is_parkrun": True
+                },
+                "rank": 1,
+                "explanation": "Best choice."
+            }
+        ]
+    })
+    client_mock.models.generate_content.return_value = mock_response
+
+    agent = RecommendationAgent(client=client_mock)
+
+    profile = RunnerProfile(level="STARTER", location="Leeds, UK")
+    coach_decision = CoachDecision(
+        distances=["5K", "10K"],
+        months_to_search=["October"],
+        beginner_guidance="Focus on completing 5k.",
+        reasoning="Good starter distances."
+    )
+    search_result = RaceSearchResult(
+        races=[
+            Race(name="Leeds Abbey Dash", location="Leeds, UK", distance="10K"),
+            Race(name="Woodhouse Moor parkrun", location="Leeds, UK", distance="5K")
+        ],
+        source="mixed",
+        query_summary="Found races"
+    )
+
+    recs = agent.run(profile, coach_decision, search_result)
+
+    assert len(recs) == 2
+    # Should be sorted by rank (rank 1 first, rank 2 second)
+    assert recs[0].rank == 1
+    assert recs[0].race.name == "Woodhouse Moor parkrun"
+    assert recs[0].explanation == "Best choice."
+    assert recs[1].rank == 2
+    assert recs[1].race.name == "Leeds Abbey Dash"
+
+
+def test_year_round_fallback_tool_mocking():
+    """
+    Test that YearRoundFallbackTool correctly requests and parses historical fallback race responses.
+    """
+    from tools.year_round_fallback_tool import YearRoundFallbackTool
+    import json
+
+    client_mock = MagicMock()
+    mock_response = MagicMock()
+    mock_response.text = json.dumps({
+        "races": [
+            {
+                "name": "Pyongyang Marathon",
+                "location": "Pyongyang, North Korea",
+                "date": "Typically April (annual)",
+                "distance": "Marathon",
+                "url": "https://koryogroup.com",
+                "is_historical": True,
+                "description": "Annual international marathon run."
+            }
+        ],
+        "source": "historical",
+        "query_summary": "Historical races in NK.",
+        "insight": "Run in North Korea",
+        "travel_tip": "Book via tour operator"
+    })
+    client_mock.models.generate_content.return_value = mock_response
+
+    tool = YearRoundFallbackTool(client=client_mock, enable_search_grounding=False)
+    search_res, insight, tip = tool.search(location="North Korea", distances=["Marathon"])
+
+    assert len(search_res.races) == 1
+    assert search_res.races[0].name == "Pyongyang Marathon"
+    assert search_res.races[0].is_historical is True
+    assert insight == "Run in North Korea"
+    assert tip == "Book via tour operator"
+
+
 
 
 

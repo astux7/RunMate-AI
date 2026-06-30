@@ -24,7 +24,7 @@ from models.runner import RunnerLevel, RunnerProfile, CoachDecision
 _STARTER_GUIDANCE = (
     "Welcome to your running journey! Starting with a 5K is the perfect first goal — "
     "it's achievable, exciting, and gives you a real race-day experience. "
-    "Prkrun is a fantastic free weekly 5K held every Saturday in parks near you — "
+    "Parkrun is a fantastic free weekly 5K held every Saturday in parks near you — "
     "friendly, timed, and welcoming to all paces including walking. "
     "You've got this! 🏃"
 )
