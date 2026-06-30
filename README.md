@@ -113,14 +113,14 @@ RunMate AI utilizes a decoupled, orchestrator-driven multi-agent architecture de
 ```mermaid
 graph TD
     User["Client App (Web/CLI)"] -->|1. Profile| Pipe["Pipeline Service (Orchestrator)"]
-    Pipe -->|2. Run Profile| Coach["Coach Agent (Deterministic)"]
-    Coach -->|3. Search Scope & Advice| Pipe
-    Pipe -->|4. Search Queries| Search["Race Search Agent (LLM + Grounding)"]
-    Search -->|5. Google Search / Parkrun Tool| Pipe
-    Pipe -->|6. Aggregated Race List| Recommender["Recommendation Agent (LLM)"]
-    Recommender -->|7. Ranked & Tagged List| Pipe
-    Pipe -->|8. Formatted Markdown| Output["Output Agent (CLI Format)"]
-    Pipe -.->|Real-time SSE Stream| User
+    Pipe -->|2. Profile| Coach["Coach Agent (Deterministic)"]
+    Coach -->|3. Scope| Pipe
+    Pipe -->|4. Queries| Search["Race Search Agent (LLM)"]
+    Search -->|5. Results| Pipe
+    Pipe -->|6. Races| Recommender["Recommendation Agent (LLM)"]
+    Recommender -->|7. Ranked| Pipe
+    Pipe -->|8. Format| Output["Output Agent"]
+    Pipe -.->|SSE Stream| User
 ```
 
 ### Core Agents
