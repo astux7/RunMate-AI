@@ -106,17 +106,42 @@ runmate-agent/
 └── requirements.txt            Project dependency manifest
 ```
 
-### Agent Flow
+## Multi-Agent Architecture
 
+RunMate AI utilizes a decoupled, orchestrator-driven multi-agent architecture designed to process runner requirements, aggregate official races, fall back to weekly community runs (parkruns), rank recommendations, and stream intermediate progress in real-time to the web client.
+
+```mermaid
+graph TD
+    User["Client App (Web/CLI)"] -->|1. Profile| Pipe["Pipeline Service (Orchestrator)"]
+    Pipe -->|2. Run Profile| Coach["Coach Agent (Deterministic)"]
+    Coach -->|3. Search Scope & Advice| Pipe
+    Pipe -->|4. Search Queries| Search["Race Search Agent (LLM + Grounding)"]
+    Search -->|5. Google Search / Parkrun Tool| Pipe
+    Pipe -->|6. Aggregated Race List| Recommender["Recommendation Agent (LLM)"]
+    Recommender -->|7. Ranked & Tagged List| Pipe
+    Pipe -->|8. Formatted Markdown| Output["Output Agent (CLI Format)"]
+    Pipe -.->|Real-time SSE Stream| User
 ```
-1. Client Form      → Gathers preferences (level, location, distances, months)
-2. FastAPI /search  → Establishes SSE stream connection
-3. CoachAgent       → Resolves target distances and beginner advice
-4. RaceSearchAgent  → Queries official races (Google Search Grounding)
-                    → Falls back to Parkruns or year-round historical events
-5. RecommenderAgent → Ranks races and generates explanation text
-6. Client JS        → Updates UI with beautiful responsive cards in real-time
-```
+
+### Core Agents
+
+* **🧠 Coach Agent** ([coach_agent.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/agents/coach_agent.py)): Pure Python / Deterministic logic. Resolves target search months, defaults starter runner distances to `["5K"]` and runners to all common distances, and issues beginner coaching advice.
+* **🔍 Race Search Agent** ([race_search_agent.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/agents/race_search_agent.py)): LLM-based (`gemini-2.5-flash`) equipped with Google Search Grounding. Translates search criteria into queries, crawls live official races, and invokes fallback tools.
+* **🌟 Recommendation Agent** ([recommendation_agent.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/agents/recommendation_agent.py)): LLM-based (`gemini-2.5-flash`). Sorts and ranks candidates, prioritizing target-city races at the top. Highlights destination series (Abbott Marathon Majors & SuperHalfs) for experienced marathon/half-marathon runners.
+* **📝 Output Agent** ([output_agent.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/agents/output_agent.py)): Formatting helper. Generates rich, color-coded terminal panels for CLI outputs.
+
+### Integrated Tools
+
+* **🌐 Google Search Grounding Tool** ([race_search_tool.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/tools/race_search_tool.py)): Connects Gemini to search indexes to extract up-to-date race listings.
+* **🗺️ Parkrun Finder Tool** ([parkrun_local_list_tool.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/tools/parkrun_local_list_tool.py)): Queries local Saturday morning community runs, capped to a maximum of 5 of the closest central parkruns.
+* **🗃️ Historical fallback Database** ([local_list_tool.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/tools/local_list_tool.py)): Returns year-round recurring local races if live crawling gets no upcoming dates.
+
+### Real-Time SSE Stream
+
+To keep the dashboard responsive and interactive, the backend streams agent actions using **Server-Sent Events (SSE)**.
+1. **Client Connection:** The dashboard initiates an SSE listener on `/api/search`.
+2. **Streaming Actions:** The orchestrator yields asynchronous JSON messages at every step (e.g. *"🏃‍♀️🏃‍♂️ Jogging around the web..."*).
+3. **Interactive UI Update:** The client JavaScript dynamically updates map markers, table rows, and cards as data arrives, automatically closing parameters once complete.
 
 ## Configuration
 
@@ -130,12 +155,13 @@ runmate-agent/
 ## Roadmap
 
 - [x] Web UI / REST API (FastAPI and JavaScript Dashboard)
-- [x] Interactive Event Map (Leaflet integration showing green/blue event markers)
+- [x] Interactive Event Map (Leaflet integration showing green/orange event markers)
+- [x] Parkrun integration (free Saturday morning 5K mapping & zero-judgment walk alerts)
+- [x] Destination race suggestions (Abbott World Marathon Majors, SuperHalfs series highlights)
 - [ ] Training plan generation
 - [ ] Strava integration
 - [ ] Garmin Connect integration
 - [ ] Weather-aware recommendations
-- [ ] Destination race suggestions (Abbott World Marathon Majors, Parkrun tourism)
 
 ## Safety
 

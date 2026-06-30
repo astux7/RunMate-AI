@@ -571,7 +571,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (event.type === 'status') {
       statusDetail.textContent = event.message;
       if (event.message.includes('Searching')) {
-        statusTitle.textContent = "🏃 Jogging around the web to find the best local races...";
+        statusTitle.textContent = "🏃‍♀️🏃‍♂️ Jogging around the web to find the best local races...";
       } else if (event.message.includes('recommendations')) {
         statusTitle.textContent = "⭐ Designing the perfect outlines for you...";
       } else if (event.message.includes('parkrun')) {
@@ -610,6 +610,51 @@ document.addEventListener('DOMContentLoaded', () => {
     errorMessageText.textContent = msg;
   }
 
+  // Helper to identify and label Abbott Marathon Majors or SuperHalfs
+  function getDestinationSeriesBadge(raceName, distance) {
+    // Abbott World Marathon Majors (Strict matching of contiguous names, supporting spaces and hyphens)
+    const majors = [
+      { regex: /tokyo(-| )marathon/i },
+      { regex: /boston(-| )marathon/i },
+      { regex: /london(-| )marathon/i },
+      { regex: /berlin(-| )marathon/i },
+      { regex: /chicago(-| )marathon/i },
+      { regex: /(new york city|nyc|new york)(-| )marathon/i }
+    ];
+
+    for (const major of majors) {
+      if (major.regex.test(raceName)) {
+        return {
+          type: 'major',
+          label: '⭐ World Major',
+          desc: 'One of the prestigious 6 Abbott World Marathon Majors. Completing all six earns the coveted Six Star Finisher Medal!'
+        };
+      }
+    }
+
+    // SuperHalfs Series (Strict matching of contiguous names, supporting spaces and hyphens)
+    const superHalfs = [
+      { regex: /lisbon(-| )half(-| )marathon/i },
+      { regex: /prague(-| )half(-| )marathon/i },
+      { regex: /(copenhagen(-| )half(-| )marathon|cph(-| )half)/i },
+      { regex: /cardiff(-| )half(-| )marathon/i },
+      { regex: /valencia(-| )half( |-)(marathon|maratón)/i },
+      { regex: /berlin(-| )half(-| )marathon/i }
+    ];
+
+    for (const sh of superHalfs) {
+      if (sh.regex.test(raceName)) {
+        return {
+          type: 'superhalf',
+          label: '⭐ SuperHalf',
+          desc: 'Part of the SuperHalfs series—six iconic European half marathons. Finish all six to earn the SuperMedal!'
+        };
+      }
+    }
+
+    return null;
+  }
+
   // 9. Render Report Output HTML with Upgraded Styling & Shorter URLs
   function renderReport(report) {
     reportContent.classList.remove('hidden');
@@ -642,7 +687,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       const medals = { 1: '🥇', 2: '🥈', 3: '🥉' };
       
-      report.recommendations.forEach(rec => {
+      report.recommendations.forEach((rec, idx) => {
         const race = rec.race;
         const medal = medals[rec.rank] || `#${rec.rank}`;
         
@@ -666,6 +711,16 @@ document.addEventListener('DOMContentLoaded', () => {
         
         titleArea.appendChild(rankSpan);
         titleArea.appendChild(nameSpan);
+        
+        // Check for Abbott Major or SuperHalf Series
+        const destSeries = getDestinationSeriesBadge(race.name, race.distance);
+        if (destSeries) {
+          const badge = document.createElement('span');
+          badge.className = `badge-${destSeries.type}`;
+          badge.style.marginLeft = '8px';
+          badge.textContent = destSeries.label;
+          titleArea.appendChild(badge);
+        }
         
         if (race.is_parkrun) {
           const tag = document.createElement('span');
@@ -694,7 +749,8 @@ document.addEventListener('DOMContentLoaded', () => {
           metaHtml += `<span class="rec-meta-item">📅 ${race.date}</span>`;
         }
         if (metaHtml) metaHtml += ` <span class="rec-meta-divider">|</span> `;
-        metaHtml += `<span class="rec-meta-item">🏃 ${race.distance}</span>`;
+        const runnerIcon = idx % 2 === 0 ? '🏃‍♀️' : '🏃‍♂️';
+        metaHtml += `<span class="rec-meta-item">${runnerIcon} ${race.distance}</span>`;
         metaHtml += ` <span class="rec-meta-divider">|</span> `;
         metaHtml += `<span class="rec-meta-item">📍 ${race.location}</span>`;
         metaRow.innerHTML = metaHtml;
@@ -738,6 +794,14 @@ document.addEventListener('DOMContentLoaded', () => {
         
         card.appendChild(exp);
         
+        // Append series details box if present
+        if (destSeries) {
+          const destBox = document.createElement('div');
+          destBox.className = `destination-series-info ${destSeries.type}-info`;
+          destBox.innerHTML = `<strong>${destSeries.label}:</strong> ${destSeries.desc}`;
+          card.appendChild(destBox);
+        }
+        
         recommendationsList.appendChild(card);
       });
     } else {
@@ -759,7 +823,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       historicalRacesList.innerHTML = '';
-      report.historical_races.forEach(race => {
+      report.historical_races.forEach((race, idx) => {
         const card = document.createElement('div');
         card.className = 'hist-card';
         
@@ -777,7 +841,8 @@ document.addEventListener('DOMContentLoaded', () => {
           metaHtml += `<span class="rec-meta-item">📅 ${race.date}</span>`;
         }
         if (metaHtml) metaHtml += ` <span class="rec-meta-divider">|</span> `;
-        metaHtml += `<span class="rec-meta-item">🏃 ${race.distance}</span>`;
+        const runnerIcon = idx % 2 === 0 ? '🏃‍♂️' : '🏃‍♀️'; // starting with man runner here to mix even more!
+        metaHtml += `<span class="rec-meta-item">${runnerIcon} ${race.distance}</span>`;
         metaHtml += ` <span class="rec-meta-divider">|</span> `;
         metaHtml += `<span class="rec-meta-item">📍 ${race.location}</span>`;
         metaRow.innerHTML = metaHtml;

@@ -24,14 +24,14 @@ from models.runner import RunnerLevel, RunnerProfile, CoachDecision
 _STARTER_GUIDANCE = (
     "Welcome to your running journey! Starting with a 5K is the perfect first goal — "
     "it's achievable, exciting, and gives you a real race-day experience. "
-    "parkrun is a fantastic free weekly 5K held every Saturday in parks near you — "
+    "Prkrun is a fantastic free weekly 5K held every Saturday in parks near you — "
     "friendly, timed, and welcoming to all paces including walking. "
     "You've got this! 🏃"
 )
 
 _STARTER_GUIDANCE_WITH_DISTANCE = (
     "Great choice setting a goal distance! Taking it step by step is the smartest approach. "
-    "parkrun is a brilliant free weekly 5K every Saturday — a perfect regular training run "
+    "Parkrun is a brilliant free weekly 5K every Saturday — a perfect regular training run "
     "as you build toward your target. You've got this! 🏃"
 )
 

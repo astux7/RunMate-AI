@@ -779,7 +779,7 @@ a:hover {
 
 .summary-cards {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 20px;
 }
 .summary-card {
@@ -788,6 +788,9 @@ a:hover {
   border-radius: 12px;
   padding: 20px;
   box-shadow: var(--shadow-sm);
+}
+.summary-card.guidance-card {
+  grid-column: 1 / -1;
 }
 .summary-card .card-title {
   font-family: var(--font-family-display);
@@ -1402,4 +1405,49 @@ input:disabled {
 }
 .rec-more-link:hover {
   color: var(--text-main);
+}
+
+/* Destination Series Badges & Info Boxes */
+.badge-major {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #b91c1c, #991b1b); /* Deep red */
+  border: 1px solid #facc15; /* Gold border */
+  color: #ffffff;
+  display: inline-block;
+  letter-spacing: 0.03em;
+  box-shadow: 0 0 5px rgba(250, 204, 21, 0.3);
+}
+
+.badge-superhalf {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #6366f1, #4f46e5); /* Indigo/Purple */
+  border: 1px solid #c084fc; /* Light purple border */
+  color: #ffffff;
+  display: inline-block;
+  letter-spacing: 0.03em;
+  box-shadow: 0 0 5px rgba(192, 132, 252, 0.3);
+}
+
+.destination-series-info {
+  background-color: rgba(255, 255, 255, 0.03);
+  padding: 10px 14px;
+  margin-top: 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.destination-series-info.major-info {
+  border-left: 3.5px solid #facc15; /* Gold indicator */
+}
+.destination-series-info.superhalf-info {
+  border-left: 3.5px solid #c084fc; /* Purple indicator */
 }

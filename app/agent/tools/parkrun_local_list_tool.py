@@ -21,14 +21,16 @@ from utils.retry import call_with_retry
 
 
 _SYSTEM_PROMPT = """\
-You are a parkrun expert. When given a city or location, return a JSON list of
-ALL parkrun events held in or very close to that city.
+You are a parkrun expert. When given a city or location, return a JSON list of the
+closest and most central parkrun events (up to a maximum of 5 events) held in or very close to that city.
 
 Each parkrun has a homepage on parkrun.org.uk in the format:
   https://www.parkrun.org.uk/<event-slug>/
 
 Rules:
 - Only include real, active parkrun events — do NOT invent events.
+- Return a maximum of 5 of the closest/most central events in the area. Do not list more.
+- For huge metropolitan cities like London, prioritize central parkruns (e.g. Southwark, Highbury Fields, Clapham Common, Fulham Palace, Brockwell) rather than far outskirts/suburbs (like Bromley, Bexley, etc.).
 - Use Google Search to find the most up-to-date list.
 - The start_time for UK parkruns is almost always "Saturday 9:00am".
 - Return ONLY valid JSON — no prose, no markdown fences.
@@ -85,10 +87,17 @@ class ParkrunLocalListTool:
         # Extract the city name for a cleaner query
         city = location.split(",")[0].strip()
 
-        user_message = (
-            f"List ALL parkrun events in {city}, UK. "
-            f"Return their names and their parkrun.org.uk homepage URLs as JSON."
-        )
+        # If the query is London, explicitly guide the model to Central London parkruns
+        if city.lower() == "london":
+            user_message = (
+                "List the closest and most central parkrun events (up to a maximum of 5) in Central London, UK (e.g. Southwark, Highbury Fields, Clapham, Fulham). "
+                "Do NOT list parkruns on the outer outskirts of Greater London. Return their names and their URLs as JSON."
+            )
+        else:
+            user_message = (
+                f"List the closest and most central parkrun events (up to a maximum of 5) in {city}, UK. "
+                f"Return their names and their parkrun.org.uk homepage URLs as JSON."
+            )
 
         tools = []
         if self._enable_search:
@@ -118,13 +127,16 @@ class ParkrunLocalListTool:
                 raw = raw.strip()
 
             data = json.loads(raw)
+            items = data.get("parkruns", [])
+            if not isinstance(items, list):
+                items = []
             return [
                 ParkrunLocation(
                     name=item["name"],
                     url=item["url"],
                     start_time=item.get("start_time", "Saturday 9:00am"),
                 )
-                for item in data.get("parkruns", [])
+                for item in items[:5]
             ]
         except Exception as exc:  # noqa: BLE001
             from utils.retry import is_credits_depleted
