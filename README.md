@@ -108,41 +108,62 @@ runmate-agent/
 
 ## Multi-Agent Architecture
 
-RunMate AI utilizes a decoupled, orchestrator-driven multi-agent architecture designed to process runner requirements, aggregate official races, fall back to weekly community runs (parkruns), rank recommendations, and stream intermediate progress in real-time to the web client.
+RunMate AI utilizes a decoupled, orchestrator-driven multi-agent architecture designed to process runner requirements, aggregate official races, fall back to weekly community runs (parkruns) or historical events, rank recommendations, and stream intermediate progress in real-time to the web client.
 
 ```mermaid
 graph TD
     User["Client App (Web/CLI)"] -->|1. Profile| Pipe["Pipeline Service (Orchestrator)"]
+    
+    %% Coach Phase
     Pipe -->|2. Profile| Coach["Coach Agent (Deterministic)"]
-    Coach -->|3. Scope| Pipe
-    Pipe -->|4. Queries| Search["Race Search Agent (LLM)"]
+    Coach -->|3. Scope & Advice| Pipe
+    
+    %% Search Phase
+    Pipe -->|4. Queries| Search["Race Search Agent (Orchestrator)"]
+    subgraph SearchAgent ["Search fallback Chain"]
+        Search -->|A. Live Search| RST["RaceSearchTool (Grounding)"]
+        Search -->|B. Fallback 1| PT["ParkrunTool (Grounding)"]
+        Search -->|C. Fallback 2| YRT["YearRoundFallbackTool (Historical)"]
+    end
+    RST -->|Races| Search
+    PT -->|Races| Search
+    YRT -->|Races| Search
     Search -->|5. Results| Pipe
-    Pipe -->|6. Races| Recommender["Recommendation Agent (LLM)"]
-    Recommender -->|7. Ranked| Pipe
-    Pipe -->|8. Format| Output["Output Agent"]
-    Pipe -->|9. Save| Disk["Disk / Cache"]
+    
+    %% Recommendations Phase
+    Pipe -->|6. Candidates| Recommender["Recommendation Agent (LLM)"]
+    Recommender -->|7. Ranked & Tagged| Pipe
+    
+    %% Parkrun List Tool
+    Pipe -->|8. Map & Table Locations| PLT["ParkrunLocalListTool (Capped to 5)"]
+    PLT -->|Local Parkruns| Pipe
+    
+    %% Outputs
+    Pipe -->|9. Format| Output["Output Agent (CLI)"]
+    Pipe -->|10. Save / Cache| Disk["Disk / Browser Cache"]
     Pipe -.->|SSE Stream| User
 ```
 
-### Core Agents
+### Core Agents & Orchestrators
 
-* **🧠 Coach Agent** ([coach_agent.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/agents/coach_agent.py)): Pure Python / Deterministic logic. Resolves target search months, defaults starter runner distances to `["5K"]` and runners to all common distances, and issues beginner coaching advice.
-* **🔍 Race Search Agent** ([race_search_agent.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/agents/race_search_agent.py)): LLM-based (`gemini-2.5-flash`) equipped with Google Search Grounding. Translates search criteria into queries, crawls live official races, and invokes fallback tools.
-* **🌟 Recommendation Agent** ([recommendation_agent.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/agents/recommendation_agent.py)): LLM-based (`gemini-2.5-flash`). Sorts and ranks candidates, prioritizing target-city races at the top. Highlights destination series (Abbott Marathon Majors & SuperHalfs) for experienced marathon/half-marathon runners.
-* **📝 Output Agent** ([output_agent.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/agents/output_agent.py)): Formatting helper. Generates rich, color-coded terminal panels for CLI outputs.
+* **⚡ Pipeline Service** ([pipeline_service.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/services/pipeline_service.py)): The top-level asynchronous orchestrator coordinating agent execution, profile validation, local parkrun list loading, and real-time SSE stream events.
+* **🧠 Coach Agent** ([coach_agent.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/agents/coach_agent.py)): Pure Python / Deterministic logic. Resolves search scope, target months, defaults target distances, and compiles beginner guidance.
+* **🔍 Race Search Agent** ([race_search_agent.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/agents/race_search_agent.py)): Search orchestrator coordinating a 3-tier fallback chain (Official Upcoming → Parkrun Fallback → Year-Round Historical fallback).
+* **🌟 Recommendation Agent** ([recommendation_agent.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/agents/recommendation_agent.py)): LLM-based (`gemini-2.5-flash`). Sorts candidates, prioritizing target-city races at the top, and tags Abbott World Marathon Majors and SuperHalfs Series.
+* **📝 Output Agent** ([output_agent.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/agents/output_agent.py)): Formatter for CLI panels.
 
 ### Integrated Tools
 
-* **🌐 Google Search Grounding Tool** ([race_search_tool.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/tools/race_search_tool.py)): Connects Gemini to search indexes to extract up-to-date race listings.
-* **🗺️ Parkrun Finder Tool** ([parkrun_local_list_tool.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/tools/parkrun_local_list_tool.py)): Queries local Saturday morning community runs, capped to a maximum of 5 of the closest central parkruns.
-* **🗃️ Historical fallback Database** ([local_list_tool.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/tools/local_list_tool.py)): Returns year-round recurring local races if live crawling gets no upcoming dates.
+* **🌐 RaceSearchTool** ([race_search_tool.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/tools/race_search_tool.py)): Google Search Grounded crawler for upcoming official race listings.
+* **🌳 ParkrunTool** ([parkrun_tool.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/tools/parkrun_tool.py)): Grounded finder for parkruns in the search area to use as a primary race-listing fallback.
+* **📅 YearRoundFallbackTool** ([year_round_fallback_tool.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/tools/year_round_fallback_tool.py)): Crawls historical/typical dates for local runs if no upcoming dates exist.
+* **🗺️ ParkrunLocalListTool** ([parkrun_local_list_tool.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/tools/parkrun_local_list_tool.py)): Grounded builder returning the closest central parkruns (capped at 5) for map coordinates and local table grids.
 
-### Real-Time SSE Stream
+### Real-Time SSE Stream & Data Saving
 
-To keep the dashboard responsive and interactive, the backend streams agent actions using **Server-Sent Events (SSE)**.
-1. **Client Connection:** The dashboard initiates an SSE listener on `/api/search`.
-2. **Streaming Actions:** The orchestrator yields asynchronous JSON messages at every step (e.g. *"🏃‍♀️🏃‍♂️ Jogging around the web..."*).
-3. **Interactive UI Update:** The client JavaScript dynamically updates map markers, table rows, and cards as data arrives, automatically closing parameters once complete.
+1. **SSE Connection:** Dashboard connects to `/api/search` via EventSource.
+2. **Progress streaming:** Yields status events as agents work (e.g. *"🏃‍♀️🏃‍♂️ Jogging around the web..."*).
+3. **Save & Cache:** Final reports are automatically saved to output files (CLI mode) or cached in the browser's `localStorage` (Web mode) for instant offline reloading.
 
 ## Configuration
 
