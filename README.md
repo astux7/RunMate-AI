@@ -120,6 +120,7 @@ graph TD
     Pipe -->|6. Races| Recommender["Recommendation Agent (LLM)"]
     Recommender -->|7. Ranked| Pipe
     Pipe -->|8. Format| Output["Output Agent"]
+    Pipe -->|9. Save| Disk["Disk / Cache"]
     Pipe -.->|SSE Stream| User
 ```
 
