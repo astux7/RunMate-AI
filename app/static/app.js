@@ -500,7 +500,8 @@ document.addEventListener('DOMContentLoaded', () => {
       
       const loc = document.createElement('span');
       loc.className = 'history-item-loc';
-      loc.textContent = item.location;
+      const itemFlag = getCountryFlagEmoji(item.location);
+      loc.textContent = `${itemFlag} ${item.location}`;
       
       const meta = document.createElement('span');
       meta.className = 'history-item-meta';
@@ -760,6 +761,67 @@ document.addEventListener('DOMContentLoaded', () => {
     return null;
   }
 
+  function getCountryFlagEmoji(locationStr) {
+    if (!locationStr) return '';
+    const clean = locationStr.toLowerCase().trim();
+    
+    const flagMap = {
+      'uk': '🇬🇧',
+      'united kingdom': '🇬🇧',
+      'great britain': '🇬🇧',
+      'england': '🇬🇧',
+      'scotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿',
+      'wales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿',
+      'usa': '🇺🇸',
+      'united states': '🇺🇸',
+      'united states of america': '🇺🇸',
+      'north korea': '🇰🇵',
+      'south korea': '🇰🇷',
+      'korea': '🇰🇷',
+      'germany': '🇩🇪',
+      'france': '🇫🇷',
+      'spain': '🇪🇸',
+      'italy': '🇮🇹',
+      'japan': '🇯🇵',
+      'china': '🇨🇳',
+      'canada': '🇨🇦',
+      'australia': '🇦🇺',
+      'netherlands': '🇳🇱',
+      'belgium': '🇧🇪',
+      'austria': '🇦🇹',
+      'switzerland': '🇨🇭',
+      'sweden': '🇸🇪',
+      'norway': '🇳🇴',
+      'finland': '🇫🇮',
+      'denmark': '🇩🇰',
+      'ireland': '🇮🇪',
+      'brazil': '🇧🇷',
+      'mexico': '🇲🇽',
+      'south africa': '🇿🇦',
+      'new zealand': '🇳🇿',
+      'singapore': '🇸🇬',
+      'kenya': '🇰🇪',
+      'ethiopia': '🇪🇹'
+    };
+    
+    for (const key in flagMap) {
+      if (clean.includes(key)) {
+        return flagMap[key];
+      }
+    }
+    
+    // Extract last token after comma as fallback check
+    const parts = clean.split(',');
+    if (parts.length > 1) {
+      const countryPart = parts[parts.length - 1].trim();
+      if (flagMap[countryPart]) {
+        return flagMap[countryPart];
+      }
+    }
+    
+    return '🏳️';
+  }
+
   // 9. Render Report Output HTML with Upgraded Styling & Shorter URLs
   function renderReport(report) {
     reportContent.classList.remove('hidden');
@@ -775,6 +837,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const p = report.profile;
     const cd = report.coach_decision;
+    const flag = getCountryFlagEmoji(p.location);
+
+    // Update recommendations header
+    const recHeader = document.getElementById('recommendationsHeader');
+    if (recHeader) {
+      const h2 = recHeader.querySelector('h2');
+      if (h2) {
+        h2.textContent = `🏅 Recommended Races in ${p.location} ${flag}`;
+      }
+    }
 
   // Show Beginner Guidance
     if (cd.beginner_guidance) {
@@ -1198,9 +1270,14 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('historicalInsightCard').classList.remove('hidden');
         document.getElementById('historicalInsightText').textContent = report.historical_insight;
         const country = p.location.split(',').pop().trim();
-        document.getElementById('historicalInsightTitle').textContent = `Running in ${country}`;
+        document.getElementById('historicalInsightTitle').textContent = `Running in ${country} ${flag}`;
       } else {
         document.getElementById('historicalInsightCard').classList.add('hidden');
+      }
+
+      const histHeader = historicalSection.querySelector('.section-header h2');
+      if (histHeader) {
+        histHeader.textContent = `📅 Races Typically Held Here in ${p.location} ${flag}`;
       }
 
       historicalRacesList.innerHTML = '';
