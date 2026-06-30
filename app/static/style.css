@@ -1651,6 +1651,7 @@ input:disabled {
 .top-row-grid:has(#resGuidanceCard.hidden) {
   grid-template-columns: 1fr;
 }
+
 .top-row-grid .summary-card.guidance-card {
   grid-column: auto !important;
   width: 100% !important;
