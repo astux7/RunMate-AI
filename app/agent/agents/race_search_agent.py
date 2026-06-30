@@ -101,7 +101,7 @@ class RaceSearchAgent(BaseAgent):
             location=profile.location,
             distances=distances,
         )
-        return parkrun_result, True, hist_result.races, hist_insight, travel_tip
+        return hist_result, False, hist_result.races, hist_insight, travel_tip
 
     # Keep BaseAgent.run() interface compatible:
     def __call__(self, *args: object, **kwargs: object) -> object:  # type: ignore[override]

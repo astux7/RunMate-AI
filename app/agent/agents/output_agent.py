@@ -279,7 +279,7 @@ class OutputAgent(BaseAgent):
         events = report.parkrun_local_events
 
         self._console.print(
-            Rule(f"[bold green]🏃 parkrun events in {city}[/bold green]", style="green")
+            Rule(f"[bold green]🏃 Parkrun events in {city}[/bold green]", style="green")
         )
         self._console.print()
 

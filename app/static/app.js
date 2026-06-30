@@ -67,6 +67,92 @@ document.addEventListener('DOMContentLoaded', () => {
     'profileUpcoming'
   ];
 
+  // --- Welcome Banner Carousel Auto-rotation & Navigation ---
+  let currentSlideIdx = 0;
+  const slides = document.querySelectorAll('.carousel-slide');
+  const indicators = document.querySelectorAll('.carousel-indicators .indicator');
+  const prevBtn = document.getElementById('carouselPrevBtn');
+  const nextBtn = document.getElementById('carouselNextBtn');
+  let carouselIntervalId = null;
+
+  function showSlide(index) {
+    if (slides.length === 0) return;
+    
+    // Wrap around index
+    if (index >= slides.length) {
+      currentSlideIdx = 0;
+    } else if (index < 0) {
+      currentSlideIdx = slides.length - 1;
+    } else {
+      currentSlideIdx = index;
+    }
+
+    // Update active slide states
+    slides.forEach((slide, idx) => {
+      if (idx === currentSlideIdx) {
+        slide.style.display = 'block';
+        // Force reflow for transform transition to trigger properly
+        slide.offsetHeight;
+        slide.classList.add('active');
+        slide.style.opacity = '1';
+      } else {
+        slide.classList.remove('active');
+        slide.style.opacity = '0';
+        slide.style.display = 'none';
+      }
+    });
+
+    // Update indicator states
+    indicators.forEach((indicator, idx) => {
+      if (idx === currentSlideIdx) {
+        indicator.classList.add('active');
+      } else {
+        indicator.classList.remove('active');
+      }
+    });
+  }
+
+  function startCarouselAutoPlay() {
+    stopCarouselAutoPlay();
+    carouselIntervalId = setInterval(() => {
+      showSlide(currentSlideIdx + 1);
+    }, 6000); // rotate every 6 seconds
+  }
+
+  function stopCarouselAutoPlay() {
+    if (carouselIntervalId) {
+      clearInterval(carouselIntervalId);
+      carouselIntervalId = null;
+    }
+  }
+
+  // Event Listeners for Nav buttons
+  if (prevBtn && nextBtn) {
+    prevBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showSlide(currentSlideIdx - 1);
+      startCarouselAutoPlay(); // Restart timer
+    });
+
+    nextBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showSlide(currentSlideIdx + 1);
+      startCarouselAutoPlay(); // Restart timer
+    });
+  }
+
+  // Click indicators
+  indicators.forEach((indicator, idx) => {
+    indicator.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showSlide(idx);
+      startCarouselAutoPlay(); // Restart timer
+    });
+  });
+
+  // Start rotation
+  startCarouselAutoPlay();
+
   // 1. Mobile Sidebar Toggle Drawer
   if (menuBtn && sidebar) {
     menuBtn.addEventListener('click', () => sidebar.classList.add('open'));
@@ -378,6 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 6. Search History Management
   let searchHistory = JSON.parse(localStorage.getItem('runmate_history') || '[]');
   renderHistoryList();
+  updateHistoryHeaderBorder();
 
   function saveHistoryItem(item) {
     searchHistory = searchHistory.filter(h => 
@@ -475,6 +562,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function updateHistoryHeaderBorder() {
+    const historyHeader = document.querySelector('.history-header');
+    if (historyHeader && formCollapsibleBody) {
+      const isExpanded = formCollapsibleBody.classList.contains('expanded');
+      if (isExpanded) {
+        historyHeader.style.borderTop = '1px solid rgba(255, 255, 255, 0.08)';
+        historyHeader.style.paddingTop = '8px';
+        historyHeader.style.marginTop = '4px';
+      } else {
+        historyHeader.style.borderTop = 'none';
+        historyHeader.style.paddingTop = '0';
+        historyHeader.style.marginTop = '0';
+      }
+    }
+  }
+
   // Collapsible Search Form header toggle
   if (formToggleHeader && formCollapsibleBody) {
     formToggleHeader.addEventListener('click', () => {
@@ -486,8 +589,10 @@ document.addEventListener('DOMContentLoaded', () => {
         formCollapsibleBody.classList.add('expanded');
         if (formToggleIcon) formToggleIcon.textContent = '−';
       }
+      updateHistoryHeaderBorder();
     });
   }
+
 
   let currentSearchQuery = null;
 
@@ -663,6 +768,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (formCollapsibleBody) {
       formCollapsibleBody.classList.remove('expanded');
       if (formToggleIcon) formToggleIcon.textContent = '+';
+      updateHistoryHeaderBorder();
     }
 
     initAndPlotMap(report);
@@ -670,7 +776,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const p = report.profile;
     const cd = report.coach_decision;
 
-    // Show Beginner Guidance
+  // Show Beginner Guidance
     if (cd.beginner_guidance) {
       resGuidanceCard.classList.remove('hidden');
       resGuidanceText.textContent = cd.beginner_guidance;
@@ -681,129 +787,404 @@ document.addEventListener('DOMContentLoaded', () => {
     // Recommendations list
     recommendationsList.innerHTML = '';
     
-    if (report.recommendations && report.recommendations.length > 0) {
+    const hasRecs = report.recommendations && report.recommendations.length > 0;
+    const hasParkruns = report.parkrun_local_events && report.parkrun_local_events.length > 0;
+    
+    if (hasRecs || hasParkruns) {
       recommendationsList.classList.remove('hidden');
       document.getElementById('recommendationsHeader').classList.remove('hidden');
       
-      const medals = { 1: '🥇', 2: '🥈', 3: '🥉' };
+      const officialRecs = report.recommendations || [];
+      const top3 = officialRecs.slice(0, 3);
+      const remainder = officialRecs.slice(3);
       
-      report.recommendations.forEach((rec, idx) => {
-        const race = rec.race;
-        const medal = medals[rec.rank] || `#${rec.rank}`;
+      // Convert parkrun events to recommendation format
+      const parkrunRecs = (report.parkrun_local_events || []).map((event) => ({
+        rank: 'Parkrun',
+        race: {
+          name: event.name,
+          location: event.location || report.profile.location,
+          date: event.start_time || 'Weekly Saturday',
+          distance: '5K',
+          url: event.url || 'https://www.parkrun.com',
+          is_parkrun: true
+        },
+        explanation: 'Completely free weekly timed 5K community run. Open to walkers, joggers, and runners of all speeds and backgrounds.'
+      }));
+
+      // Combined remainder list
+      const combinedRemainder = [...remainder, ...parkrunRecs];
+      
+      // 1. Render Top 3 Carousel (Only for the top official recommendations)
+      if (top3.length > 0) {
+        const carouselWrapper = document.createElement('div');
+        carouselWrapper.className = 'rec-carousel-wrapper';
         
-        const card = document.createElement('div');
-        card.className = `rec-card ${race.is_parkrun ? 'rec-parkrun' : 'rec-official'}`;
+        const track = document.createElement('div');
+        track.className = 'rec-carousel-track';
         
-        // Header
-        const header = document.createElement('div');
-        header.className = 'rec-card-header';
+        const medals = { 1: '🥇', 2: '🥈', 3: '🥉' };
         
-        const titleArea = document.createElement('div');
-        titleArea.className = 'rec-title-area';
-        
-        const rankSpan = document.createElement('span');
-        rankSpan.className = 'rec-rank';
-        rankSpan.textContent = medal;
-        
-        const nameSpan = document.createElement('span');
-        nameSpan.className = 'rec-name';
-        nameSpan.textContent = race.name;
-        
-        titleArea.appendChild(rankSpan);
-        titleArea.appendChild(nameSpan);
-        
-        // Check for Abbott Major or SuperHalf Series
-        const destSeries = getDestinationSeriesBadge(race.name, race.distance);
-        if (destSeries) {
-          const badge = document.createElement('span');
-          badge.className = `badge-${destSeries.type}`;
-          badge.style.marginLeft = '8px';
-          badge.textContent = destSeries.label;
-          titleArea.appendChild(badge);
-        }
-        
-        if (race.is_parkrun) {
-          const tag = document.createElement('span');
-          tag.className = 'badge-parkrun';
-          tag.textContent = 'Parkrun';
-          tag.style.marginLeft = '8px';
+        top3.forEach((rec, idx) => {
+          const race = rec.race;
+          const medal = medals[rec.rank] || `#${rec.rank}`;
+          const destSeries = getDestinationSeriesBadge(race.name, race.distance);
+          const runnerIcon = idx % 2 === 0 ? '🏃‍♀️' : '🏃‍♂️';
           
-          const freeTag = document.createElement('span');
-          freeTag.className = 'badge-free';
-          freeTag.textContent = 'Free';
-          freeTag.style.marginLeft = '6px';
+          const slide = document.createElement('div');
+          slide.className = `rec-carousel-slide ${idx === 0 ? 'active' : ''}`;
+          slide.style.display = idx === 0 ? 'block' : 'none';
+          slide.style.opacity = idx === 0 ? '1' : '0';
           
-          titleArea.appendChild(tag);
-          titleArea.appendChild(freeTag);
+          const card = document.createElement('div');
+          card.className = `rec-card ${race.is_parkrun ? 'rec-parkrun' : 'rec-official'}`;
+          card.style.margin = '0';
+          
+          // Header
+          const header = document.createElement('div');
+          header.className = 'rec-card-header';
+          
+          const titleArea = document.createElement('div');
+          titleArea.className = 'rec-title-area';
+          
+          const rankSpan = document.createElement('span');
+          rankSpan.className = 'rec-rank';
+          rankSpan.textContent = medal;
+          
+          const nameSpan = document.createElement('span');
+          nameSpan.className = 'rec-name';
+          nameSpan.textContent = race.name;
+          
+          titleArea.appendChild(rankSpan);
+          titleArea.appendChild(nameSpan);
+          
+          // Prepend Type Badge (parkrun or RACE) and cost indicator (Free or money bag) as separate tags
+          const typeBadge = document.createElement('span');
+          const costBadge = document.createElement('span');
+          
+          if (race.is_parkrun) {
+            typeBadge.style.backgroundColor = 'transparent';
+            typeBadge.style.border = '1.5px solid #f97316';
+            typeBadge.style.color = '#f97316';
+            typeBadge.style.fontSize = '9px';
+            typeBadge.style.fontWeight = '700';
+            typeBadge.style.textTransform = 'uppercase';
+            typeBadge.style.padding = '1px 5px';
+            typeBadge.style.borderRadius = '4px';
+            typeBadge.style.marginLeft = '8px';
+            typeBadge.style.display = 'inline-flex';
+            typeBadge.style.alignItems = 'center';
+            typeBadge.style.lineHeight = '1';
+            typeBadge.textContent = 'parkrun';
+            
+            costBadge.style.backgroundColor = 'transparent';
+            costBadge.style.border = '1.5px solid #10b981';
+            costBadge.style.color = '#10b981';
+            costBadge.style.fontSize = '9px';
+            costBadge.style.fontWeight = '700';
+            costBadge.style.textTransform = 'uppercase';
+            costBadge.style.padding = '1px 5px';
+            costBadge.style.borderRadius = '4px';
+            costBadge.style.marginLeft = '6px';
+            costBadge.style.display = 'inline-flex';
+            costBadge.style.alignItems = 'center';
+            costBadge.style.lineHeight = '1';
+            costBadge.textContent = 'Free';
+          } else {
+            typeBadge.style.backgroundColor = 'transparent';
+            typeBadge.style.border = '1.5px solid #ef4444';
+            typeBadge.style.color = '#ef4444';
+            typeBadge.style.fontSize = '9px';
+            typeBadge.style.fontWeight = '700';
+            typeBadge.style.textTransform = 'uppercase';
+            typeBadge.style.padding = '1px 5px';
+            typeBadge.style.borderRadius = '4px';
+            typeBadge.style.marginLeft = '8px';
+            typeBadge.style.display = 'inline-flex';
+            typeBadge.style.alignItems = 'center';
+            typeBadge.style.lineHeight = '1';
+            typeBadge.textContent = 'RACE';
+            
+            costBadge.style.backgroundColor = 'transparent';
+            costBadge.style.border = '1.5px solid #fbbf24';
+            costBadge.style.color = '#fbbf24';
+            costBadge.style.fontSize = '9px';
+            costBadge.style.fontWeight = '700';
+            costBadge.style.textTransform = 'uppercase';
+            costBadge.style.padding = '1px 5px';
+            costBadge.style.borderRadius = '4px';
+            costBadge.style.marginLeft = '6px';
+            costBadge.style.display = 'inline-flex';
+            costBadge.style.alignItems = 'center';
+            costBadge.style.lineHeight = '1';
+            costBadge.textContent = 'Paid';
+          }
+          titleArea.appendChild(typeBadge);
+          titleArea.appendChild(costBadge);
+          
+          if (destSeries) {
+            const badge = document.createElement('span');
+            badge.className = `badge-${destSeries.type}`;
+            badge.style.marginLeft = '8px';
+            badge.textContent = destSeries.label;
+            titleArea.appendChild(badge);
+          }
+          
+          header.appendChild(titleArea);
+          card.appendChild(header);
+          
+          // Metadata Row
+          const metaRow = document.createElement('div');
+          metaRow.className = 'rec-meta-row';
+          
+          let metaHtml = '';
+          if (race.date) {
+            metaHtml += `<span class="rec-meta-item">📅 ${race.date}</span>`;
+          }
+          if (metaHtml) metaHtml += ` <span class="rec-meta-divider">|</span> `;
+          metaHtml += `<span class="rec-meta-item">${runnerIcon} ${race.distance}</span>`;
+          metaHtml += ` <span class="rec-meta-divider">|</span> `;
+          metaHtml += `<span class="rec-meta-item">📍 ${race.location}</span>`;
+          metaRow.innerHTML = metaHtml;
+          
+          // Actions
+          const actionsWrapper = document.createElement('span');
+          actionsWrapper.className = 'rec-meta-item';
+          actionsWrapper.style.marginLeft = 'auto';
+          actionsWrapper.style.display = 'inline-flex';
+          actionsWrapper.style.gap = '8px';
+          actionsWrapper.style.alignItems = 'center';
+          
+          if (race.url) {
+            const urlBtn = document.createElement('a');
+            urlBtn.href = race.url;
+            urlBtn.target = '_blank';
+            urlBtn.className = 'rec-action-link';
+            urlBtn.style.padding = '4px 10px';
+            urlBtn.style.fontSize = '11px';
+            urlBtn.style.margin = '0';
+            urlBtn.innerHTML = 'Link';
+            actionsWrapper.appendChild(urlBtn);
+          }
+          
+          const mapBtn = document.createElement('button');
+          mapBtn.type = 'button';
+          mapBtn.className = 'show-on-map-btn';
+          mapBtn.style.padding = '4px 10px';
+          mapBtn.style.fontSize = '11px';
+          mapBtn.innerHTML = '📍 Map';
+          mapBtn.addEventListener('click', () => focusMarker(race.name));
+          actionsWrapper.appendChild(mapBtn);
+          
+          metaRow.appendChild(actionsWrapper);
+          card.appendChild(metaRow);
+          
+          // Explanation
+          const exp = document.createElement('p');
+          exp.className = 'rec-explanation';
+          exp.textContent = rec.explanation;
+          card.appendChild(exp);
+          
+          // Destination Series Info
+          if (destSeries) {
+            const destBox = document.createElement('div');
+            destBox.className = `destination-series-info ${destSeries.type}-info`;
+            destBox.innerHTML = `<strong>${destSeries.label}:</strong> ${destSeries.desc}`;
+            card.appendChild(destBox);
+          }
+          
+          slide.appendChild(card);
+          track.appendChild(slide);
+        });
+        
+        carouselWrapper.appendChild(track);
+        
+        // Indicators and Controls (only render if there's more than 1 item)
+        if (top3.length > 1) {
+          const controls = document.createElement('div');
+          controls.className = 'carousel-nav-container';
+          controls.style.marginTop = '12px';
+          
+          const prevBtn = document.createElement('button');
+          prevBtn.type = 'button';
+          prevBtn.className = 'carousel-nav-btn';
+          prevBtn.innerHTML = '‹';
+          
+          const indicatorsContainer = document.createElement('div');
+          indicatorsContainer.className = 'carousel-indicators';
+          
+          const nextBtn = document.createElement('button');
+          nextBtn.type = 'button';
+          nextBtn.className = 'carousel-nav-btn';
+          nextBtn.innerHTML = '›';
+          
+          top3.forEach((_, sIdx) => {
+            const ind = document.createElement('span');
+            ind.className = `indicator ${sIdx === 0 ? 'active' : ''}`;
+            ind.addEventListener('click', (e) => {
+              e.stopPropagation();
+              showCarouselSlide(sIdx);
+            });
+            indicatorsContainer.appendChild(ind);
+          });
+          
+          let activeIdx = 0;
+          const slidesEls = track.querySelectorAll('.rec-carousel-slide');
+          const indicatorsEls = indicatorsContainer.querySelectorAll('.indicator');
+          
+          function showCarouselSlide(index) {
+            if (index >= slidesEls.length) {
+              activeIdx = 0;
+            } else if (index < 0) {
+              activeIdx = slidesEls.length - 1;
+            } else {
+              activeIdx = index;
+            }
+            
+            slidesEls.forEach((slideEl, idx) => {
+              if (idx === activeIdx) {
+                slideEl.style.display = 'block';
+                slideEl.offsetHeight; // Force reflow
+                slideEl.classList.add('active');
+                slideEl.style.opacity = '1';
+              } else {
+                slideEl.classList.remove('active');
+                slideEl.style.opacity = '0';
+                slideEl.style.display = 'none';
+              }
+            });
+            
+            indicatorsEls.forEach((indEl, idx) => {
+              if (idx === activeIdx) {
+                indEl.classList.add('active');
+              } else {
+                indEl.classList.remove('active');
+              }
+            });
+          }
+          
+          prevBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showCarouselSlide(activeIdx - 1);
+          });
+          
+          nextBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showCarouselSlide(activeIdx + 1);
+          });
+          
+          controls.appendChild(prevBtn);
+          controls.appendChild(indicatorsContainer);
+          controls.appendChild(nextBtn);
+          carouselWrapper.appendChild(controls);
         }
         
-        header.appendChild(titleArea);
-        card.appendChild(header);
-        
-        // Horizontal Metadata Row (Top row below title)
-        const metaRow = document.createElement('div');
-        metaRow.className = 'rec-meta-row';
-        
-        let metaHtml = '';
-        if (race.date) {
-          metaHtml += `<span class="rec-meta-item">📅 ${race.date}</span>`;
-        }
-        if (metaHtml) metaHtml += ` <span class="rec-meta-divider">|</span> `;
-        const runnerIcon = idx % 2 === 0 ? '🏃‍♀️' : '🏃‍♂️';
-        metaHtml += `<span class="rec-meta-item">${runnerIcon} ${race.distance}</span>`;
-        metaHtml += ` <span class="rec-meta-divider">|</span> `;
-        metaHtml += `<span class="rec-meta-item">📍 ${race.location}</span>`;
-        metaRow.innerHTML = metaHtml;
+        recommendationsList.appendChild(carouselWrapper);
+      }
 
-        // Action buttons wrapper (push to the right)
-        const actionsWrapper = document.createElement('span');
-        actionsWrapper.className = 'rec-meta-item';
-        actionsWrapper.style.marginLeft = 'auto';
-        actionsWrapper.style.display = 'inline-flex';
-        actionsWrapper.style.gap = '8px';
-        actionsWrapper.style.alignItems = 'center';
+      // 2. Render Remainder List (with combined Parkruns)
+      if (combinedRemainder.length > 0) {
+        // Promote races belonging to Abbott Majors or SuperHalfs
+        const promoted = [];
+        const standard = [];
+        combinedRemainder.forEach(rec => {
+          const destSeries = getDestinationSeriesBadge(rec.race.name, rec.race.distance);
+          if (destSeries) {
+            promoted.push(rec);
+          } else {
+            standard.push(rec);
+          }
+        });
+        const sortedRemainder = [...promoted, ...standard];
 
-        if (race.url) {
-          const urlBtn = document.createElement('a');
-          urlBtn.href = race.url;
-          urlBtn.target = '_blank';
-          urlBtn.className = 'rec-action-link';
-          urlBtn.style.padding = '4px 10px';
-          urlBtn.style.fontSize = '11px';
-          urlBtn.style.margin = '0'; // align inline
-          urlBtn.innerHTML = 'Link';
-          actionsWrapper.appendChild(urlBtn);
-        }
+        const remainderSection = document.createElement('div');
+        remainderSection.className = 'remainder-races-section';
+        remainderSection.style.marginTop = '24px';
+        
+        const remainderTitle = document.createElement('h3');
+        remainderTitle.className = 'card-title';
+        remainderTitle.style.marginBottom = '12px';
+        remainderTitle.style.fontSize = '14px';
+        remainderTitle.style.textTransform = 'uppercase';
+        remainderTitle.style.letterSpacing = '0.05em';
+        remainderTitle.style.color = 'var(--text-muted)';
+        remainderTitle.textContent = '⭐ Additional Recommended Races & Parkruns';
+        remainderSection.appendChild(remainderTitle);
 
-        const mapBtn = document.createElement('button');
-        mapBtn.type = 'button';
-        mapBtn.className = 'show-on-map-btn';
-        mapBtn.style.padding = '4px 10px';
-        mapBtn.style.fontSize = '11px';
-        mapBtn.innerHTML = '📍 Map';
-        mapBtn.addEventListener('click', () => focusMarker(race.name));
-        actionsWrapper.appendChild(mapBtn);
-        
-        metaRow.appendChild(actionsWrapper);
-        card.appendChild(metaRow);
-        
-        // Explanation (Simple paragraph text)
-        const exp = document.createElement('p');
-        exp.className = 'rec-explanation';
-        exp.textContent = rec.explanation;
-        
-        card.appendChild(exp);
-        
-        // Append series details box if present
-        if (destSeries) {
-          const destBox = document.createElement('div');
-          destBox.className = `destination-series-info ${destSeries.type}-info`;
-          destBox.innerHTML = `<strong>${destSeries.label}:</strong> ${destSeries.desc}`;
-          card.appendChild(destBox);
-        }
-        
-        recommendationsList.appendChild(card);
-      });
+        const listWrapper = document.createElement('div');
+        listWrapper.className = 'remainder-list-wrapper';
+        listWrapper.style.display = 'flex';
+        listWrapper.style.flexDirection = 'column';
+        listWrapper.style.gap = '8px';
+
+        sortedRemainder.forEach((rec) => {
+          const race = rec.race;
+          const destSeries = getDestinationSeriesBadge(race.name, race.distance);
+          const isPromoted = destSeries !== null;
+
+          const row = document.createElement('div');
+          row.className = `remainder-row-card ${isPromoted ? 'promoted-row' : ''}`;
+          
+          // Prepend Type Badge (parkrun in orange, or RACE in red) and cost tag (Free or money bag)
+          let typeBadgeHtml = '';
+          if (race.is_parkrun) {
+            typeBadgeHtml = `
+              <span style="background-color: transparent; border: 1.5px solid #f97316; color: #f97316; font-size: 9px; font-weight: 700; text-transform: uppercase; padding: 1px 5px; border-radius: 4px; display: inline-flex; align-items: center; line-height: 1; margin-right: 6px;">parkrun</span>
+              <span style="background-color: transparent; border: 1.5px solid #10b981; color: #10b981; font-size: 9px; font-weight: 700; text-transform: uppercase; padding: 1px 5px; border-radius: 4px; display: inline-flex; align-items: center; line-height: 1; margin-right: 8px;">Free</span>
+            `;
+          } else {
+            typeBadgeHtml = `
+              <span style="background-color: transparent; border: 1.5px solid #ef4444; color: #ef4444; font-size: 9px; font-weight: 700; text-transform: uppercase; padding: 1px 5px; border-radius: 4px; display: inline-flex; align-items: center; line-height: 1; margin-right: 6px;">RACE</span>
+              <span style="background-color: transparent; border: 1.5px solid #fbbf24; color: #fbbf24; font-size: 9px; font-weight: 700; text-transform: uppercase; padding: 1px 5px; border-radius: 4px; display: inline-flex; align-items: center; line-height: 1; margin-right: 8px;">Paid</span>
+            `;
+          }
+
+          let seriesBadgeHtml = '';
+          if (destSeries) {
+            seriesBadgeHtml = `<span class="badge-${destSeries.type}" style="margin-left: 8px; font-size: 10px; padding: 2px 6px;">${destSeries.label}</span>`;
+          }
+
+          let urlHtml = '';
+          if (race.url) {
+            urlHtml = `<a href="${race.url}" target="_blank" class="rec-action-link" style="padding: 2px 8px; font-size: 10px; margin: 0;">Link</a>`;
+          }
+
+          const rankDisplay = race.is_parkrun ? '🌳' : `#${rec.rank}`;
+
+          row.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 8px;">
+              <div style="display: flex; align-items: center; flex-wrap: wrap;">
+                ${typeBadgeHtml}
+                <span style="font-weight: 700; color: var(--text-color); font-size: 13px;">${rankDisplay} ${race.name}</span>
+                ${seriesBadgeHtml}
+              </div>
+              <div style="display: flex; gap: 6px; align-items: center;">
+                ${urlHtml}
+                <button type="button" class="show-on-map-btn" style="padding: 2px 8px; font-size: 10px;">📍 Map</button>
+              </div>
+            </div>
+            <div style="display: flex; gap: 12px; margin-top: 4px; font-size: 11px; color: var(--text-muted); flex-wrap: wrap;">
+              <span>📅 ${race.date || 'Year-round'}</span>
+              <span>•</span>
+              <span>🏃 ${race.distance}</span>
+              <span>•</span>
+              <span>📍 ${race.location}</span>
+            </div>
+            <p style="margin: 4px 0 0 0; font-size: 12px; line-height: 1.5; color: var(--text-muted);">${rec.explanation}</p>
+          `;
+
+          // Handle map focus
+          const mapBtn = row.querySelector('.show-on-map-btn');
+          if (mapBtn) {
+            mapBtn.addEventListener('click', () => focusMarker(race.name));
+          }
+
+          listWrapper.appendChild(row);
+        });
+
+        remainderSection.appendChild(listWrapper);
+        recommendationsList.appendChild(remainderSection);
+      }
     } else {
       recommendationsList.classList.add('hidden');
       document.getElementById('recommendationsHeader').classList.add('hidden');
@@ -867,14 +1248,7 @@ document.addEventListener('DOMContentLoaded', () => {
           actionsWrapper.appendChild(urlBtn);
         }
 
-        const mapBtn = document.createElement('button');
-        mapBtn.type = 'button';
-        mapBtn.className = 'show-on-map-btn';
-        mapBtn.style.padding = '4px 10px';
-        mapBtn.style.fontSize = '11px';
-        mapBtn.innerHTML = '📍 Map';
-        mapBtn.addEventListener('click', () => focusMarker(race.name));
-        actionsWrapper.appendChild(mapBtn);
+        // No map button is appended for typical historical races since the map is hidden for these fallback queries
         
         metaRow.appendChild(actionsWrapper);
         card.appendChild(metaRow);
@@ -900,77 +1274,8 @@ document.addEventListener('DOMContentLoaded', () => {
       historicalSection.classList.add('hidden');
     }
 
-    // Parkrun local list
-    if (report.parkrun_local_events && report.parkrun_local_events.length > 0) {
-      parkrunSection.classList.remove('hidden');
-      const city = p.location.split(',')[0].trim();
-      document.getElementById('parkrunTitle').textContent = `🏃 parkrun events in ${city}`;
-      
-      parkrunTableBody.innerHTML = '';
-      report.parkrun_local_events.forEach((event, idx) => {
-        const tr = document.createElement('tr');
-        
-        const tdIdx = document.createElement('td');
-        tdIdx.textContent = idx + 1;
-        
-        const tdName = document.createElement('td');
-        tdName.style.fontWeight = '600';
-        
-        const nameSpan = document.createElement('span');
-        nameSpan.textContent = event.name;
-        
-        const tag = document.createElement('span');
-        tag.className = 'badge-parkrun';
-        tag.style.fontSize = '9px';
-        tag.style.padding = '1px 4px';
-        tag.style.marginLeft = '8px';
-        tag.textContent = 'parkrun';
-        
-        const freeTag = document.createElement('span');
-        freeTag.className = 'badge-free';
-        freeTag.style.fontSize = '9px';
-        freeTag.style.padding = '1px 4px';
-        freeTag.style.marginLeft = '4px';
-        freeTag.textContent = 'Free';
-        
-        tdName.appendChild(nameSpan);
-        tdName.appendChild(tag);
-        tdName.appendChild(freeTag);
-        
-        const tdStart = document.createElement('td');
-        tdStart.textContent = event.start_time;
-        
-        const tdLink = document.createElement('td');
-        tdLink.style.display = 'flex';
-        tdLink.style.gap = '6px';
-        
-        const a = document.createElement('a');
-        a.href = event.url;
-        a.target = '_blank';
-        a.className = 'rec-action-link';
-        a.style.padding = '4px 10px';
-        a.style.fontSize = '11px';
-        a.innerHTML = 'Link';
-        
-        const mapBtn = document.createElement('button');
-        mapBtn.type = 'button';
-        mapBtn.className = 'show-on-map-btn';
-        mapBtn.style.padding = '4px 10px';
-        mapBtn.style.fontSize = '11px';
-        mapBtn.innerHTML = '📍 Map';
-        mapBtn.addEventListener('click', () => focusMarker(event.name));
-        
-        tdLink.appendChild(a);
-        tdLink.appendChild(mapBtn);
-        
-        tr.appendChild(tdIdx);
-        tr.appendChild(tdName);
-        tr.appendChild(tdStart);
-        tr.appendChild(tdLink);
-        
-        parkrunTableBody.appendChild(tr);
-      });
-    } else {
+    // Parkrun local list (hidden since they are merged under the recommendations list)
+    if (parkrunSection) {
       parkrunSection.classList.add('hidden');
     }
 
@@ -1043,6 +1348,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const mapEl = document.getElementById('map');
     const mapSectionWrapper = document.getElementById('mapSectionWrapper');
     if (!mapEl || !mapSectionWrapper) return;
+
+    // Check if only historical fallback is shown
+    const hasHistorical = report.historical_races && report.historical_races.length > 0;
+    const hasUpcoming = report.recommendations && report.recommendations.length > 0;
+    const hasParkrun = report.parkrun_local_events && report.parkrun_local_events.length > 0;
+
+    if (hasHistorical && !hasUpcoming && !hasParkrun) {
+      mapSectionWrapper.classList.add('hidden');
+      return;
+    }
 
     // Reset marker registry
     for (const key in markerMap) {
@@ -1131,7 +1446,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // If no coordinates could be resolved, keep map hidden
-    if (pointsToPlot.length === 0) return;
+    if (pointsToPlot.length === 0) {
+      mapSectionWrapper.classList.add('hidden');
+      return;
+    }
 
     // Show map container
     mapSectionWrapper.classList.remove('hidden');
@@ -1145,6 +1463,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }).addTo(mapInstance);
 
     markerGroup = L.featureGroup().addTo(mapInstance);
+
+    // Ensure map tiles calculate correct grid dimensions
+    setTimeout(() => {
+      if (mapInstance) mapInstance.invalidateSize();
+    }, 100);
 
     // Custom leaflet colored marker icons
     const greenMarkerIcon = new L.Icon({

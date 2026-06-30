@@ -12,7 +12,7 @@
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
     rel="stylesheet">
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="/static/style.css?v=1.3">
+  <link rel="stylesheet" href="/static/style.css?v=2.7">
   <!-- Leaflet Map CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
@@ -32,10 +32,92 @@
 
 
 
-      <!-- Search History Section -->
-      <div class="sidebar-section history-section">
-        <div class="history-header">
-          <h2 class="section-title">Search History</h2>
+      <!-- Options Section (Search Parameters form) -->
+      <div class="sidebar-section options-section">
+        <section class="form-container">
+          <div class="form-toggle-header" id="formToggleHeader">
+            <span class="toggle-title">🔍 Edit Search Parameters</span>
+            <span class="toggle-icon" id="formToggleIcon">−</span>
+          </div>
+          <div class="form-collapsible-body expanded" id="formCollapsibleBody">
+            <form id="searchForm" class="search-form">
+              <div class="form-grid">
+                <!-- Level Input -->
+                <div class="form-group level-group">
+                  <label class="group-label">Experience Level</label>
+                  <div class="level-selector">
+                    <input type="radio" name="level" id="levelStarter" value="STARTER">
+                    <label for="levelStarter" class="level-label starter-label">
+                      <span class="bullet"></span>
+                      <span class="text">Starter</span>
+                    </label>
+
+                    <input type="radio" name="level" id="levelRunner" value="RUNNER">
+                    <label for="levelRunner" class="level-label runner-label">
+                      <span class="bullet"></span>
+                      <span class="text">Runner</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Location Input -->
+                <div class="form-group">
+                  <label for="locationInput" class="group-label">Target Location</label>
+                  <div class="input-wrapper location-wrapper">
+                    <span class="input-icon">📍</span>
+                    <input type="text" id="locationInput" placeholder="e.g. Leeds, United Kingdom or Germany" required
+                      autocomplete="off">
+                    <div class="autocomplete-suggestions hidden" id="autocompleteSuggestions"></div>
+                  </div>
+                </div>
+
+                <!-- Distances Option -->
+                <div class="form-group">
+                  <label class="group-label">Preferred Distances (Optional)</label>
+                  <div class="starter-warning-text hidden" id="starterWarningText">
+                    💡 We recommend starting with <strong>5K</strong> or <strong>10K</strong> distances to build your base
+                    safely. Longer distances (Half Marathon, Marathon, Ultra) are not recommended at the Starter level.
+                  </div>
+                  <div class="chip-container" id="distanceChips">
+                    <button type="button" class="chip" data-value="5K" disabled>5K</button>
+                    <button type="button" class="chip" data-value="10K" disabled>10K</button>
+                    <button type="button" class="chip" data-value="Half Marathon" data-advanced="true" disabled>Half
+                      Marathon</button>
+                    <button type="button" class="chip" data-value="Marathon" data-advanced="true"
+                      disabled>Marathon</button>
+                    <button type="button" class="chip" data-value="Ultra" data-advanced="true" disabled>Ultra</button>
+                  </div>
+                </div>
+
+                <!-- Months Option -->
+                <div class="form-group">
+                  <label class="group-label">Months to Search (Optional)</label>
+                  <div class="chip-container scrollable-chips" id="monthChips">
+                    <!-- Dynamically generated rolling 12 months in JavaScript -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- Bottom Action Row -->
+              <div class="action-row">
+                <div class="grounding-toggle-container">
+                  <input type="checkbox" id="groundingToggle" checked disabled>
+                  <label for="groundingToggle" class="disabled-label">Use Google Search Grounding</label>
+                </div>
+                <button type="submit" class="submit-btn" id="submitBtn" disabled>
+                  <span class="btn-text">Let's find a race</span>
+                  <span class="btn-icon">⚡</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+      </div>
+
+      <!-- Search History Section (Below Options) -->
+      <div class="sidebar-section history-section" id="historySection">
+        <div class="history-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 8px; margin-top: 4px; margin-bottom: 8px;">
+          <span class="section-title" style="margin-bottom: 0;">Search History</span>
           <button class="clear-history-btn" id="clearHistoryBtn">Clear</button>
         </div>
         <div class="history-list" id="historyList">
@@ -61,97 +143,44 @@
         <div style="width: 24px;"></div> <!-- Spacer -->
       </header>
 
-      <!-- Welcome Banner -->
-      <section class="welcome-banner" id="welcomeBanner">
-        <div class="welcome-text">
-          <h1>Let's find your next run, together.</h1>
-          <p>Every journey starts with a single step - and you don't have to take it alone. Tell RunMate your location
-            and how you feel about running. We'll jog through live race databases, look up free, friendly Saturday
-            parkruns, and build a personalized outline just for you. Whether you want to walk a 5K with zero judgment or
-            smash a marathon, we're lacing up alongside you!</p>
+      <!-- Welcome Banner Carousel -->
+      <section class="welcome-banner welcome-banner-carousel" id="welcomeBanner">
+        <div class="carousel-track-container">
+          <div class="carousel-slide active" data-slide="1">
+            <div class="welcome-text">
+              <h1>Let's find your next run, together.</h1>
+              <p>Every journey starts with a single step - and you don't have to take it alone. Tell RunMate your location
+                and how you feel about running. We'll jog through live race databases, look up free, friendly Saturday
+                parkruns, and build a personalized outline just for you. Whether you want to walk a 5K with zero judgment or
+                smash a marathon, we're lacing up alongside you!</p>
+            </div>
+          </div>
+          <div class="carousel-slide" data-slide="2" style="display: none; opacity: 0;">
+            <div class="welcome-text">
+              <h1>On holiday and want something cool?</h1>
+              <p>We will find your next milestone abroad! Turn your next vacation into an unforgettable athletic adventure. Whether it's a scenic seaside 10K, a historic city trail run, or a vibrant local community parkrun in a new country, we'll help you track down and plan your next milestone miles around the globe.</p>
+            </div>
+          </div>
+          <div class="carousel-slide" data-slide="3" style="display: none; opacity: 0;">
+            <div class="welcome-text">
+              <h1>Chasing the world's greatest running collections?</h1>
+              <p>Explore legendary achievements like the prestigious Abbott World Marathon Majors (Tokyo, Boston, London, Berlin, Chicago, and New York City) and famous half marathon series. Discover historic courses, secure your qualification paths, and begin building your ultimate lifetime running bucket list!</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Carousel Indicators & Control Arrows -->
+        <div class="carousel-nav-container">
+          <button type="button" class="carousel-nav-btn prev-btn" id="carouselPrevBtn" aria-label="Previous Slide">‹</button>
+          <div class="carousel-indicators" id="carouselIndicators">
+            <span class="indicator active" data-slide-to="0"></span>
+            <span class="indicator" data-slide-to="1"></span>
+            <span class="indicator" data-slide-to="2"></span>
+          </div>
+          <button type="button" class="carousel-nav-btn next-btn" id="carouselNextBtn" aria-label="Next Slide">›</button>
         </div>
       </section>
 
-      <!-- Search Form Box -->
-      <section class="form-container">
-        <div class="form-toggle-header" id="formToggleHeader">
-          <span class="toggle-title">🔍 Edit Search Parameters</span>
-          <span class="toggle-icon" id="formToggleIcon">−</span>
-        </div>
-        <div class="form-collapsible-body expanded" id="formCollapsibleBody">
-          <form id="searchForm" class="search-form">
-            <div class="form-grid">
-              <!-- Level Input -->
-              <div class="form-group level-group">
-                <label class="group-label">Experience Level</label>
-                <div class="level-selector">
-                  <input type="radio" name="level" id="levelStarter" value="STARTER">
-                  <label for="levelStarter" class="level-label starter-label">
-                    <span class="bullet"></span>
-                    <span class="text">Starter</span>
-                  </label>
-
-                  <input type="radio" name="level" id="levelRunner" value="RUNNER">
-                  <label for="levelRunner" class="level-label runner-label">
-                    <span class="bullet"></span>
-                    <span class="text">Runner</span>
-                  </label>
-                </div>
-              </div>
-
-              <!-- Location Input -->
-              <div class="form-group">
-                <label for="locationInput" class="group-label">Target Location</label>
-                <div class="input-wrapper location-wrapper">
-                  <span class="input-icon">📍</span>
-                  <input type="text" id="locationInput" placeholder="e.g. Leeds, United Kingdom or Germany" required
-                    autocomplete="off">
-                  <div class="autocomplete-suggestions hidden" id="autocompleteSuggestions"></div>
-                </div>
-              </div>
-
-              <!-- Distances Option -->
-              <div class="form-group">
-                <label class="group-label">Preferred Distances (Optional)</label>
-                <div class="starter-warning-text hidden" id="starterWarningText">
-                  💡 We recommend starting with <strong>5K</strong> or <strong>10K</strong> distances to build your base
-                  safely. Longer distances (Half Marathon, Marathon, Ultra) are not recommended at the Starter level.
-                </div>
-                <div class="chip-container" id="distanceChips">
-                  <button type="button" class="chip" data-value="5K" disabled>5K</button>
-                  <button type="button" class="chip" data-value="10K" disabled>10K</button>
-                  <button type="button" class="chip" data-value="Half Marathon" data-advanced="true" disabled>Half
-                    Marathon</button>
-                  <button type="button" class="chip" data-value="Marathon" data-advanced="true"
-                    disabled>Marathon</button>
-                  <button type="button" class="chip" data-value="Ultra" data-advanced="true" disabled>Ultra</button>
-                </div>
-              </div>
-
-              <!-- Months Option -->
-              <div class="form-group">
-                <label class="group-label">Months to Search (Optional) <span class="label-info-text">(next 3 months by
-                    default)</span></label>
-                <div class="chip-container scrollable-chips" id="monthChips">
-                  <!-- Dynamically generated rolling 12 months in JavaScript -->
-                </div>
-              </div>
-            </div>
-
-            <!-- Bottom Action Row -->
-            <div class="action-row">
-              <div class="grounding-toggle-container">
-                <input type="checkbox" id="groundingToggle" checked disabled>
-                <label for="groundingToggle" class="disabled-label">Use Google Search Grounding</label>
-              </div>
-              <button type="submit" class="submit-btn" id="submitBtn" disabled>
-                <span class="btn-text">Let's find a race</span>
-                <span class="btn-icon">⚡</span>
-              </button>
-            </div>
-          </form>
-        </div>
-      </section>
 
       <!-- Status and Results Area -->
       <section class="results-container" id="resultsContainer">
@@ -190,9 +219,23 @@
 
         <!-- Result Content (Report Output) -->
         <div class="report-content hidden" id="reportContent">
-          <!-- Profile & Decision Summary -->
-          <div class="summary-cards">
-            <!-- Coach Guidance for Starter/Beginners -->
+          <!-- Profile & Decision Summary + Map Grid -->
+          <div class="top-row-grid" id="topRowGrid">
+            <!-- Live Event Map Container (Left) -->
+            <div class="map-section-wrapper" id="mapSectionWrapper">
+              <h3 class="card-title">🗺️ Live Event Map</h3>
+              <div class="map-container-relative" style="flex-grow: 1; display: flex; flex-direction: column; width: 100%;">
+                <div id="map"
+                  style="height: 350px; border-radius: 12px; border: 1.5px solid var(--theme-color); box-shadow: 0 0 15px var(--theme-glow-weak); margin-top: 6px; margin-bottom: 0; z-index: 10; flex-grow: 1; width: 100%;">
+                  <div class="map-loader" id="mapLoader">
+                    <div class="map-spinner"></div>
+                    <span>Plotting events on map...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Coach Guidance for Starter/Beginners (Right) -->
             <div class="summary-card guidance-card hidden" id="resGuidanceCard">
               <h3 class="card-title">💚 Beginner Guidance</h3>
               <p class="guidance-text" id="resGuidanceText"></p>
@@ -208,22 +251,6 @@
                 are not alone! I found local Saturday morning Parkrun events instead. They are completely free,
                 incredibly welcoming weekly 5K runs. Walkers are warmly encouraged and you can finish at your own
                 comfortable pace with zero judgment. Let's start here!</p>
-            </div>
-          </div>
-
-          <!-- Live Event Map Container -->
-          <div class="map-section-wrapper" id="mapSectionWrapper">
-            <div class="section-header">
-              <h2>🗺️ Live Event Map</h2>
-            </div>
-            <div class="map-container-relative">
-              <div id="map"
-                style="height: 350px; border-radius: 12px; border: 1.5px solid var(--theme-color); box-shadow: 0 0 15px var(--theme-glow-weak); margin-top: 10px; margin-bottom: 20px; z-index: 10;">
-                <div class="map-loader" id="mapLoader">
-                  <div class="map-spinner"></div>
-                  <span>Plotting events on map...</span>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -309,7 +336,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <!-- Client JavaScript -->
-  <script src="/static/app.js?v=1.2"></script>
+  <script src="/static/app.js?v=2.7"></script>
 </body>
 
 </html>

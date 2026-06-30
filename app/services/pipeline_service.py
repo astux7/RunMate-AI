@@ -46,15 +46,18 @@ async def run_pipeline(profile_data: dict, enable_search: bool = True):
         )
         
         # 3. Recommendation Agent
-        yield {"type": "status", "message": "Generating personalized recommendations..."}
-        recommender = RecommendationAgent(client=client)
-        recommendations = await asyncio.to_thread(
-            recommender.run,
-            profile,
-            coach_decision,
-            search_result,
-            used_parkrun
-        )
+        recommendations = []
+        has_historical = len(historical_races) > 0
+        if not has_historical:
+            yield {"type": "status", "message": "Generating personalized recommendations..."}
+            recommender = RecommendationAgent(client=client)
+            recommendations = await asyncio.to_thread(
+                recommender.run,
+                profile,
+                coach_decision,
+                search_result,
+                used_parkrun
+            )
         
         # 4. Local Parkruns (if relevant)
         parkrun_local_events = []
