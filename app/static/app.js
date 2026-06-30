@@ -801,7 +801,14 @@ document.addEventListener('DOMContentLoaded', () => {
       'new zealand': '🇳🇿',
       'singapore': '🇸🇬',
       'kenya': '🇰🇪',
-      'ethiopia': '🇪🇹'
+      'ethiopia': '🇪🇹',
+      'luxembourg': '🇱🇺',
+      'portugal': '🇵🇹',
+      'greece': '🇬🇷',
+      'poland': '🇵🇱',
+      'czech republic': '🇨🇿',
+      'czechia': '🇨🇿',
+      'hungary': '🇭🇺'
     };
     
     for (const key in flagMap) {
