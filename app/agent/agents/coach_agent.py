@@ -26,7 +26,8 @@ _STARTER_GUIDANCE = (
     "it's achievable, exciting, and gives you a real race-day experience. "
     "Parkrun is a fantastic free weekly 5K held every Saturday in parks near you — "
     "friendly, timed, and welcoming to all paces including walking. "
-    "You've got this! 🏃"
+    "You've got this! 🏃 Remember, to ease into running, you can start by walking "
+    "and gradually include short intervals of running."
 )
 
 _STARTER_GUIDANCE_WITH_DISTANCE = (

@@ -166,7 +166,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function generateMonthChips() {
     if (!monthChipsContainer) return;
-    monthChipsContainer.innerHTML = '';
+    const optionsPanel = monthChipsContainer.querySelector('.select-options-panel') || monthChipsContainer;
+    optionsPanel.innerHTML = '';
     
     // Use the current system date context
     const now = new Date();
@@ -191,14 +192,20 @@ document.addEventListener('DOMContentLoaded', () => {
         ? `${displayAbbr} '${String(year).substring(2)}`
         : displayAbbr;
 
-      const chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'chip';
-      chip.dataset.value = monthName;
-      chip.textContent = displayLabel;
-      chip.disabled = true; // disabled initially until level is selected
+      const opt = document.createElement('div');
+      opt.className = 'select-option disabled';
+      opt.dataset.value = monthName;
       
-      monthChipsContainer.appendChild(chip);
+      const checkbox = document.createElement('span');
+      checkbox.className = 'custom-checkbox';
+      opt.appendChild(checkbox);
+      
+      const label = document.createElement('span');
+      label.className = 'option-label';
+      label.textContent = displayLabel;
+      opt.appendChild(label);
+      
+      optionsPanel.appendChild(opt);
     }
   }
 
@@ -230,52 +237,78 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const hasLocation = locationInput.value.trim().length > 0;
     const shouldEnableOthers = hasLevel && hasLocation;
-    
-    // 2. Enable/Disable Month chips
-    monthChipsContainer.querySelectorAll('.chip').forEach(chip => {
-      chip.disabled = !shouldEnableOthers;
-      if (!shouldEnableOthers) {
-        chip.classList.remove('active');
-      }
-    });
 
-    // 3. Enable/Disable Distance chips
-    distanceChipsContainer.querySelectorAll('.chip').forEach(chip => {
-      const isAdvanced = chip.dataset.advanced === 'true';
-      chip.disabled = !shouldEnableOthers;
-      
-      if (shouldEnableOthers) {
-        if (isStarterSelected) {
-          if (isAdvanced) {
-            chip.classList.add('not-recommended');
-            chip.title = "Not recommended for Starter level";
-            
-            // If it was standard active, transform to warning-active
-            if (chip.classList.contains('active')) {
-              chip.classList.remove('active');
-              chip.classList.add('warning-active');
+    // Enable/Disable Trigger Buttons
+    const distanceTrigger = document.getElementById('distanceTrigger');
+    const monthTrigger = document.getElementById('monthTrigger');
+    if (distanceTrigger) distanceTrigger.disabled = !shouldEnableOthers;
+    if (monthTrigger) monthTrigger.disabled = !shouldEnableOthers;
+    
+    if (!shouldEnableOthers) {
+      // Close dropdowns if form state is invalid
+      document.querySelectorAll('.select-options-panel').forEach(panel => {
+        panel.classList.add('hidden');
+      });
+      document.querySelectorAll('.select-trigger').forEach(trigger => {
+        trigger.classList.remove('open');
+      });
+    }
+    
+    // 2. Enable/Disable Month options
+    if (monthChipsContainer) {
+      monthChipsContainer.querySelectorAll('.select-option').forEach(opt => {
+        if (shouldEnableOthers) {
+          opt.classList.remove('disabled');
+        } else {
+          opt.classList.add('disabled');
+          opt.classList.remove('active');
+        }
+      });
+    }
+
+    // 3. Enable/Disable Distance options
+    if (distanceChipsContainer) {
+      distanceChipsContainer.querySelectorAll('.select-option').forEach(opt => {
+        const isAdvanced = opt.dataset.advanced === 'true';
+        
+        if (shouldEnableOthers) {
+          opt.classList.remove('disabled');
+          if (isStarterSelected) {
+            if (isAdvanced) {
+              opt.classList.add('not-recommended');
+              opt.title = "Not recommended for Starter level";
+              
+              // If it was standard active, transform to warning-active
+              if (opt.classList.contains('active')) {
+                opt.classList.remove('active');
+                opt.classList.add('warning-active');
+              }
+            } else {
+              opt.classList.remove('not-recommended', 'warning-active');
+              opt.removeAttribute('title');
             }
           } else {
-            chip.classList.remove('not-recommended', 'warning-active');
-            chip.removeAttribute('title');
+            // RUNNER selected - all options enabled normally, remove warning markings
+            opt.classList.remove('not-recommended');
+            opt.removeAttribute('title');
+            
+            // If it was warning-active, transform back to standard active
+            if (opt.classList.contains('warning-active')) {
+              opt.classList.remove('warning-active');
+              opt.classList.add('active');
+            }
           }
         } else {
-          // RUNNER selected - all options enabled normally, remove warning markings
-          chip.classList.remove('not-recommended');
-          chip.removeAttribute('title');
-          
-          // If it was warning-active, transform back to standard active
-          if (chip.classList.contains('warning-active')) {
-            chip.classList.remove('warning-active');
-            chip.classList.add('active');
-          }
+          // If disabled, remove active states and warning markings so they don't look active when disabled
+          opt.classList.add('disabled');
+          opt.classList.remove('active', 'warning-active', 'not-recommended');
+          opt.removeAttribute('title');
         }
-      } else {
-        // If disabled, remove active states and warning markings so they don't look active when disabled
-        chip.classList.remove('active', 'warning-active', 'not-recommended');
-        chip.removeAttribute('title');
-      }
-    });
+      });
+    }
+
+    updateTriggerText('distanceChips');
+    updateTriggerText('monthChips');
 
     // 4. Enable/Disable Grounding toggle and Submit button
     groundingToggle.disabled = !shouldEnableOthers;
@@ -297,59 +330,130 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Set up chip selection handler
-  setupChips('distanceChips');
-  setupChips('monthChips');
+  // Set up custom select dropdown handlers
+  setupCustomSelect('distanceChips');
+  setupCustomSelect('monthChips');
 
-  function setupChips(containerId) {
+  function setupCustomSelect(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
-    container.addEventListener('click', (e) => {
-      const chip = e.target;
-      if (chip.classList.contains('chip')) {
+    
+    const trigger = container.querySelector('.select-trigger');
+    const panel = container.querySelector('.select-options-panel');
+    
+    if (trigger && panel) {
+      // Toggle dropdown panel
+      trigger.addEventListener('click', (e) => {
         e.preventDefault();
-        if (chip.disabled) return;
+        e.stopPropagation();
+        if (trigger.disabled) return;
         
-        if (chip.classList.contains('not-recommended')) {
-          // Starter clicking an advanced distance chip - toggle warning-active state
-          chip.classList.toggle('warning-active');
+        // Close other open panels first
+        document.querySelectorAll('.select-options-panel').forEach(p => {
+          if (p !== panel) {
+            p.classList.add('hidden');
+            const t = p.previousElementSibling;
+            if (t) t.classList.remove('open');
+          }
+        });
+        
+        panel.classList.toggle('hidden');
+        trigger.classList.toggle('open');
+      });
+    }
+    
+    // Toggle options selections
+    container.addEventListener('click', (e) => {
+      const option = e.target.closest('.select-option');
+      if (option) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (option.classList.contains('disabled')) return;
+        
+        if (option.classList.contains('not-recommended')) {
+          // Starter clicking an advanced option - toggle warning-active state
+          option.classList.toggle('warning-active');
         } else {
-          // Standard chip - toggle active state
-          chip.classList.toggle('active');
+          // Standard option - toggle active state
+          option.classList.toggle('active');
         }
+        
+        updateTriggerText(containerId);
       }
     });
+  }
+
+  // Close dropdowns when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.custom-select-container')) {
+      document.querySelectorAll('.select-options-panel').forEach(panel => {
+        panel.classList.add('hidden');
+      });
+      document.querySelectorAll('.select-trigger').forEach(trigger => {
+        trigger.classList.remove('open');
+      });
+    }
+  });
+
+  function updateTriggerText(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    let trigger = null;
+    let defaultText = '';
+    if (containerId === 'distanceChips') {
+      trigger = document.getElementById('distanceTrigger');
+      defaultText = 'Select distances...';
+    } else if (containerId === 'monthChips') {
+      trigger = document.getElementById('monthTrigger');
+      defaultText = 'Select months...';
+    }
+    
+    if (!trigger) return;
+    const labelSpan = trigger.querySelector('.trigger-label');
+    if (!labelSpan) return;
+    
+    const selected = getSelectedChips(containerId);
+    if (selected.length === 0) {
+      labelSpan.textContent = defaultText;
+      trigger.classList.remove('has-selection');
+    } else {
+      labelSpan.textContent = selected.join(', ');
+      trigger.classList.add('has-selection');
+    }
   }
 
   function getSelectedChips(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return [];
-    // Collect both standard active and warning-active chips
-    const activeChips = container.querySelectorAll('.chip.active, .chip.warning-active');
-    return Array.from(activeChips).map(chip => chip.dataset.value);
+    // Collect both standard active and warning-active options/chips
+    const activeElements = container.querySelectorAll('.select-option.active, .select-option.warning-active, .chip.active, .chip.warning-active');
+    return Array.from(activeElements).map(el => el.dataset.value);
   }
 
   function clearSelectedChips(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
-    container.querySelectorAll('.chip.active, .chip.warning-active').forEach(chip => {
-      chip.classList.remove('active', 'warning-active');
+    container.querySelectorAll('.select-option.active, .select-option.warning-active, .chip.active, .chip.warning-active').forEach(el => {
+      el.classList.remove('active', 'warning-active');
     });
+    updateTriggerText(containerId);
   }
 
   function setSelectedChips(containerId, values) {
     const container = document.getElementById(containerId);
     if (!container || !values) return;
     clearSelectedChips(containerId);
-    container.querySelectorAll('.chip').forEach(chip => {
-      if (values.includes(chip.dataset.value) && !chip.disabled) {
-        if (chip.classList.contains('not-recommended')) {
-          chip.classList.add('warning-active');
+    container.querySelectorAll('.select-option, .chip').forEach(el => {
+      if (values.includes(el.dataset.value) && !el.classList.contains('disabled') && !el.disabled) {
+        if (el.classList.contains('not-recommended')) {
+          el.classList.add('warning-active');
         } else {
-          chip.classList.add('active');
+          el.classList.add('active');
         }
       }
     });
+    updateTriggerText(containerId);
   }
 
   // 4. OpenStreetMap Autocomplete Location Suggest
@@ -371,7 +475,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Hide dropdown when clicking outside
     document.addEventListener('click', (e) => {
-      if (e.target !== locationInput && e.target !== autocompleteSuggestions) {
+      if (e.target !== locationInput && !autocompleteSuggestions.contains(e.target)) {
         autocompleteSuggestions.classList.add('hidden');
       }
     });
@@ -440,11 +544,15 @@ document.addEventListener('DOMContentLoaded', () => {
       item.className = 'autocomplete-suggestion';
       item.innerHTML = `📍 <span>${label}</span>`;
       
-      item.addEventListener('click', () => {
+      const selectHandler = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         locationInput.value = label;
         autocompleteSuggestions.classList.add('hidden');
         validateFormState();
-      });
+      };
+      item.addEventListener('mousedown', selectHandler);
+      item.addEventListener('click', selectHandler);
 
       autocompleteSuggestions.appendChild(item);
     });

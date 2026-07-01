@@ -165,7 +165,8 @@ class YearRoundFallbackTool:
             from utils.retry import is_credits_depleted
             if is_credits_depleted(str(exc)):
                 raise
-            import sys, traceback
+            import sys
+            import traceback
             print(f"[YearRoundFallbackTool] search failed: {exc}", file=sys.stderr)
             if os.getenv("RUNMATE_DEBUG", "").lower() == "true":
                 traceback.print_exc(file=sys.stderr)

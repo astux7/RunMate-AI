@@ -40,53 +40,66 @@ The agent pipeline runs **three specialised ADK agents in sequence**, then prese
 
 ## Architecture
 
-RunMate uses **Google ADK's `SequentialAgent`** to chain three custom `BaseAgent` sub-agents. Each agent reads from and writes to the ADK session state via `Event(state={...})` — the correct ADK pattern for persisting state between agents.
+RunMate uses **Google ADK's `SequentialAgent`** to orchestrate the pipeline, with a nested **`ParallelAgent`** firing all three search tools concurrently. Each agent reads from and writes to the ADK session state via `Event(state={...})`.
 
 ```mermaid
 flowchart TD
     User(["👤 User\n(Web / CLI / ADK UI)"])
 
-    subgraph ADK ["🤖 ADK SequentialAgent — runmate_pipeline"]
+    subgraph SEQ ["SequentialAgent — runmate_pipeline"]
         direction TB
 
-        CA["🧠 CoachAgent\n─────────────────\n• Pure Python — zero LLM calls\n• Resolves distances to search\n• Resolves months to search\n• Writes STARTER beginner guidance\n• Yields state via Event(state={…})"]
+        CA["🧠 CoachAgent\n─────────────────────\n• Zero LLM calls — pure Python\n• Resolves distances to search\n• Resolves months to search\n• Generates STARTER guidance\n• Writes coach_distances, coach_months\n  to session state via Event(state={})"]
 
-        RSA["🔍 RaceSearchAgent\n─────────────────\n• Reads coach_distances, coach_months\n• Runs 3-tier search fallback chain\n• Yields races_found, historical_races\n  travel_tip, search_summary to state"]
+        subgraph PAR ["ParallelAgent — search_orchestrator (all 3 fire concurrently ⚡)"]
+            direction LR
+            OSA["🌐 OfficialSearchAgent\nGemini grounding\nUpcoming official races"]
+            PSA["🌳 ParkrunSearchAgent\nGemini grounding\nFree weekly 5K parkruns"]
+            HSA["📅 HistoricalSearchAgent\nGemini grounding\nYear-round historical races"]
+        end
 
-        RA["🌟 RecommendationAgent\n─────────────────\n• Reads races_found from state\n• Skips if historical races found\n• LLM ranks & explains top picks\n• Yields recommendation_result"]
+        MRG["🔀 SearchMergerAgent\n─────────────────────\n• Reads all 3 result sets from state\n• Picks best by priority:\n  1️⃣ Official → 2️⃣ Parkrun → 3️⃣ Historical\n• Writes races_found to state"]
 
-        CA -->|"session state\ncoach_distances\ncoach_months\ncoach_guidance"| RSA
-        RSA -->|"session state\nraces_found\nhistorical_races\ntravel_tip"| RA
+        RA["🌟 RecommendationAgent\n─────────────────────\n• Skips if historical races selected\n• Gemini 2.5 Flash ranks & explains\n• Writes recommendation_result"]
+
+        CA -->|"coach_distances\ncoach_months\n→ session state"| PAR
+        PAR -->|"official_races_raw\nparkrun_races_raw\nhistorical_races_raw\n→ session state"| MRG
+        MRG -->|"races_found\nsearch_source\nused_parkrun\n→ session state"| RA
     end
 
-    subgraph Search ["🔎 Search Fallback Chain (inside RaceSearchAgent)"]
-        direction LR
-        T1["🌐 RaceSearchTool\nGoogle Grounding\n(Upcoming races)"]
-        T2["🌳 ParkrunTool\nGoogle Grounding\n(Free weekly 5Ks)"]
-        T3["📅 YearRoundFallbackTool\nHistorical race data"]
-        T1 -->|"No results?"| T2
-        T2 -->|"No results?"| T3
+    subgraph OUT ["📤 Output Layer"]
+        WEB["🌐 Web Dashboard\nFastAPI + SSE\nLeaflet map + history"]
+        CLI["💻 CLI\nRich panels + parkrun table"]
+        ADKUI["🧪 ADK Web UI\nadk web — dev/trace"]
     end
 
-    subgraph Output ["📤 Output Layer"]
-        WEB["🌐 Web Dashboard\nFastAPI + SSE stream\nLeaflet map + history"]
-        CLI["💻 CLI Output\nRich panels + parkrun table"]
-        ADKUI["🧪 ADK Web UI\nadk web — dev testing"]
-    end
-
-    User -->|"level, location\ndistance, month"| ADK
-    RSA <--> Search
-    RA --> Output
-    ADK -.->|"SSE progress events"| WEB
+    User -->|"level, location\ndistance?, month?"| SEQ
+    RA --> OUT
+    SEQ -.->|"SSE progress events"| WEB
 ```
+
+### Why Parallel Search?
+
+Previously the 3 search tools ran **sequentially** — each waited for the previous to fail before starting. With `ParallelAgent` all three fire at the same time:
+
+| | Sequential (old) | Parallel (new) |
+|---|---|---|
+| Best case (official races found) | ~12s | ~12s |
+| Worst case (all 3 needed) | ~36s | ~12s ⚡ |
+| Extra API calls | 0 | +2 in happy path |
+
+`SearchMergerAgent` then picks the highest-priority non-empty result.
 
 ### Agent Responsibilities
 
-| Agent | LLM? | What it does |
-|---|---|---|
-| **CoachAgent** | ❌ Pure Python | Resolves distances & months from profile; writes STARTER guidance |
-| **RaceSearchAgent** | ✅ Gemini grounding | Searches for real races; parkrun & historical fallbacks |
-| **RecommendationAgent** | ✅ Gemini 2.5 Flash | Ranks candidates; explains why each race suits the runner |
+| Agent | LLM? | Runs in | What it does |
+|---|---|---|---|
+| **CoachAgent** | ❌ Pure Python | Sequential | Resolves distances & months; writes STARTER guidance |
+| **OfficialSearchAgent** | ✅ Gemini grounding | Parallel | Finds upcoming official races |
+| **ParkrunSearchAgent** | ✅ Gemini grounding | Parallel | Finds local free parkrun events |
+| **HistoricalSearchAgent** | ✅ Gemini grounding | Parallel | Finds historically held races as last resort |
+| **SearchMergerAgent** | ❌ Pure Python | Sequential | Picks best result by priority order |
+| **RecommendationAgent** | ✅ Gemini 2.5 Flash | Sequential | Ranks & explains the top picks |
 
 ### Tools
 
@@ -96,6 +109,7 @@ flowchart TD
 | `ParkrunTool` | Grounding-based parkrun discovery near the target location |
 | `YearRoundFallbackTool` | Historical race dates when no upcoming results found |
 | `ParkrunLocalListTool` | Returns up to 5 nearby parkruns for the map & table view |
+
 
 ---
 
@@ -224,16 +238,16 @@ runmate-agent/
 │
 ├── app/
 │   ├── agent/                      ← ADK agent package (root_agent lives here)
-│   │   ├── agent.py                   SequentialAgent pipeline definition
+│   │   ├── agent.py                   Pipeline: SequentialAgent + ParallelAgent
 │   │   ├── agents/
 │   │   │   ├── coach_agent.py         Pure-Python profile interpreter
-│   │   │   ├── race_search_agent.py   Grounding-based race search + fallbacks
+│   │   │   ├── race_search_agent.py   Legacy searcher (used by pipeline_service)
 │   │   │   ├── recommendation_agent.py LLM ranker & explainer
 │   │   │   └── output_agent.py        CLI Rich panel formatter
 │   │   ├── tools/
-│   │   │   ├── race_search_tool.py    Google Search grounding tool
-│   │   │   ├── parkrun_tool.py        Parkrun grounding tool
-│   │   │   ├── year_round_fallback_tool.py  Historical fallback tool
+│   │   │   ├── race_search_tool.py    Official race search (Gemini grounding)
+│   │   │   ├── parkrun_tool.py        Parkrun search (Gemini grounding)
+│   │   │   ├── year_round_fallback_tool.py  Historical race fallback
 │   │   │   └── parkrun_local_list_tool.py   Local parkrun map/table tool
 │   │   ├── models/
 │   │   │   ├── runner.py              RunnerLevel, RunnerProfile, CoachDecision
@@ -290,6 +304,8 @@ runmate-agent/
 ## Roadmap
 
 - [x] ADK `SequentialAgent` multi-agent pipeline
+- [x] ADK `ParallelAgent` search orchestrator (concurrent search ⚡)
+- [x] `SearchMergerAgent` — priority-based result selection
 - [x] Web UI / REST API (FastAPI + JavaScript Dashboard)
 - [x] Interactive Event Map (Leaflet — green/orange markers)
 - [x] Parkrun integration (free Saturday 5K mapping)

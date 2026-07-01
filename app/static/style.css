@@ -113,7 +113,11 @@ body.theme-runner {
 body {
   font-family: var(--font-family-sans);
   color: var(--text-main);
-  background-color: var(--bg-app);
+  background-image: url('/static/background.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   line-height: 1.5;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
@@ -144,7 +148,9 @@ a:hover {
 /* --- Sidebar Style --- */
 .sidebar {
   width: var(--sidebar-width);
-  background-color: var(--bg-sidebar);
+  background-color: rgba(13, 23, 60, 0.88);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   border-right: 1px solid var(--border-color);
   padding: 24px;
   display: flex;
@@ -361,14 +367,38 @@ a:hover {
 }
 
 /* --- Main Content Area --- */
+@keyframes centerColorTransition {
+  0% {
+    background-color: rgba(8, 15, 38, 0.72);
+  }
+  33% {
+    background-color: rgba(18, 10, 32, 0.72);
+  }
+  66% {
+    background-color: rgba(5, 20, 28, 0.72);
+  }
+  100% {
+    background-color: rgba(8, 15, 38, 0.72);
+  }
+}
+
 .main-content {
   flex-grow: 1;
   padding: 40px;
-  max-width: 1000px;
+  width: 100%;
+  max-width: 1100px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 24px;
+  
+  /* Glassmorphism transitioning background */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  animation: centerColorTransition 12s infinite ease-in-out;
+  min-height: 100vh;
 }
 
 .mobile-navbar {
@@ -412,11 +442,38 @@ a:hover {
   position: relative;
   overflow: hidden;
 }
+/* If Welcome Slide is active, render a blurred slide background overlay */
+.welcome-banner::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-size: cover;
+  background-position: center;
+  filter: blur(4px);
+  transform: scale(1.05); /* hide edge blur artifacts */
+  opacity: 0;
+  transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), background-image 0.5s ease-in-out;
+  z-index: 0;
+  pointer-events: none;
+}
+.welcome-banner:has(.carousel-slide[data-slide="1"].active)::before {
+  opacity: 1;
+  background-image: linear-gradient(rgba(10, 15, 38, 0.45), rgba(10, 15, 38, 0.58)), url('/static/welcome_bg.jpg');
+}
+.welcome-banner:has(.carousel-slide[data-slide="2"].active)::before {
+  opacity: 1;
+  background-image: linear-gradient(rgba(10, 15, 38, 0.45), rgba(10, 15, 38, 0.58)), url('/static/holiday_bg.jpg');
+}
+.welcome-banner:has(.carousel-slide[data-slide="3"].active)::before {
+  opacity: 1;
+  background-image: linear-gradient(rgba(10, 15, 38, 0.45), rgba(10, 15, 38, 0.58)), url('/static/collections_bg.jpg');
+}
 .welcome-banner-carousel {
   padding-bottom: 24px; /* Space for indicators */
 }
 .carousel-track-container {
   position: relative;
+  z-index: 2;
   width: 100%;
   min-height: 140px; /* Prevent collapse during transition */
 }
@@ -514,6 +571,9 @@ a:hover {
   box-shadow: 0 0 15px var(--theme-glow), 0 0 4px rgba(255, 255, 255, 0.35);
   overflow: hidden;
 }
+.form-container:has(.form-collapsible-body.expanded) {
+  overflow: visible;
+}
 
 .form-toggle-header {
   display: flex;
@@ -565,6 +625,7 @@ a:hover {
   opacity: 1;
   padding: 12px 28px 28px 28px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: visible;
 }
 
 .form-grid {
@@ -578,6 +639,20 @@ a:hover {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* Ensure proper stacking order of form group dropdowns/autocompletes */
+.form-grid .form-group:nth-child(2) {
+  position: relative;
+  z-index: 3;
+}
+.form-grid .form-group:nth-child(3) {
+  position: relative;
+  z-index: 2;
+}
+.form-grid .form-group:nth-child(4) {
+  position: relative;
+  z-index: 1;
 }
 
 .group-label {
@@ -695,6 +770,159 @@ a:hover {
 
 .scrollable-chips {
   padding: 2px;
+}
+
+/* Custom Multi-select Dropdown styling */
+.custom-select-container {
+  position: relative;
+  width: 100%;
+}
+.select-trigger {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--theme-input-bg);
+  border: 1px solid var(--theme-input-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 15px;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all var(--transition-speed);
+  text-align: left;
+}
+.select-trigger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background-color: rgba(255, 255, 255, 0.01) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.3) !important;
+  box-shadow: none !important;
+}
+.select-trigger:not(:disabled):hover,
+.select-trigger.open {
+  outline: none;
+  background-color: var(--theme-input-focus-bg);
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--theme-glow-weak);
+}
+.select-trigger .trigger-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: 8px;
+  pointer-events: none;
+}
+.select-trigger .trigger-arrow {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+.select-trigger.open .trigger-arrow {
+  transform: rotate(180deg);
+}
+
+.select-options-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 6px;
+  background: rgba(10, 15, 30, 0.98);
+  border: 1px solid var(--theme-input-border);
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 0 10px var(--theme-glow-weak);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 100;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 6px;
+}
+.select-options-panel::-webkit-scrollbar {
+  width: 6px;
+}
+.select-options-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+.select-options-panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+.select-option {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 2px;
+  user-select: none;
+}
+.select-option:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.select-option.disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Custom checkbox inside option */
+.select-option .custom-checkbox {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  border-radius: 4px;
+  margin-right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  position: relative;
+}
+.select-option.active .custom-checkbox {
+  background: var(--theme-color);
+  border-color: var(--theme-color);
+  box-shadow: 0 0 6px var(--theme-glow);
+}
+.select-option.warning-active .custom-checkbox {
+  background: #ffab00;
+  border-color: #ffab00;
+  box-shadow: 0 0 6px rgba(255, 171, 0, 0.6);
+}
+
+/* Checkmark check icon */
+.select-option.active .custom-checkbox::after,
+.select-option.warning-active .custom-checkbox::after {
+  content: "";
+  position: absolute;
+  left: 4.5px;
+  top: 1.5px;
+  width: 4px;
+  height: 8px;
+  border: solid #000000;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* Option States text styling */
+.select-option.active {
+  background: rgba(0, 240, 255, 0.1);
+  font-weight: 500;
+}
+.select-option.warning-active {
+  background: rgba(255, 171, 0, 0.1);
+  font-weight: 500;
+}
+.select-option.not-recommended {
+  border-left: 3px solid #ffab00;
 }
 
 /* Action and Submit Row */
@@ -1588,6 +1816,7 @@ input:disabled {
   box-shadow: none !important;
   border-radius: 0 !important;
   margin-bottom: 0 !important;
+  overflow: visible !important;
 }
 .sidebar .form-toggle-header {
   padding: 8px 0 !important;
@@ -1600,6 +1829,7 @@ input:disabled {
 .sidebar .form-collapsible-body.expanded {
   padding: 12px 0 0 0 !important;
   border-top: none !important;
+  overflow: visible !important;
 }
 
 /* Grounding checkbox and Submit button stack on full row inside sidebar */

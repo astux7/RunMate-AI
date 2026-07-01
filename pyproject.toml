@@ -1,0 +1,6 @@
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+# Ignore E402 (module level import not at top of file) since we modify sys.path for local imports.
+ignore = ["E402"]

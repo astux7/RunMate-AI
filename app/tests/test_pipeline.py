@@ -169,11 +169,14 @@ async def test_pipeline_service_bypasses_recommendations_on_historical():
     hist_insight = "North Korea hosts the Pyongyang Marathon annually in April."
     travel_tip = "Best time to travel for running: April."
 
-    # Mock the searcher.run method inside run_pipeline
-    with patch("services.pipeline_service.RaceSearchAgent") as MockSearchAgentClass:
-        mock_agent_instance = MagicMock()
-        mock_agent_instance.run.return_value = (hist_search_result, False, [mock_historical], hist_insight, travel_tip)
-        MockSearchAgentClass.return_value = mock_agent_instance
+    # Patch the three parallel search tools so no real API calls are made
+    empty_result = RaceSearchResult(races=[], source="official", query_summary="")
+    parkrun_empty = RaceSearchResult(races=[], source="parkrun", query_summary="")
+
+    with patch("tools.race_search_tool.RaceSearchTool.search", return_value=empty_result), \
+         patch("tools.parkrun_tool.ParkrunTool.search", return_value=parkrun_empty), \
+         patch("tools.year_round_fallback_tool.YearRoundFallbackTool.search",
+               return_value=(hist_search_result, hist_insight, travel_tip)):
 
         # Call run_pipeline and iterate to find the final result
         final_report = None
@@ -186,7 +189,7 @@ async def test_pipeline_service_bypasses_recommendations_on_historical():
         assert len(final_report["historical_races"]) == 1
         assert final_report["historical_races"][0]["name"] == "Pyongyang Marathon"
         assert len(final_report["recommendations"]) == 0
-        
+
         # Explicitly verify the historical Pyongyang Marathon does NOT show up in recommendations
         recommended_names = [rec["race"]["name"] for rec in final_report["recommendations"]]
         assert "Pyongyang Marathon" not in recommended_names
@@ -217,13 +220,15 @@ async def test_pipeline_user_journeys():
     )
     search_result = RaceSearchResult(races=[mock_race], source="upcoming", query_summary="Mocked races")
 
-    # Mock the searcher and recommender runs
-    with patch("services.pipeline_service.RaceSearchAgent") as MockSearchAgentClass, \
+    # Patch the three parallel search tools and the recommender
+    empty_hist = RaceSearchResult(races=[], source="historical", query_summary="")
+
+    with patch("tools.race_search_tool.RaceSearchTool.search", return_value=search_result), \
+         patch("tools.parkrun_tool.ParkrunTool.search",
+               return_value=RaceSearchResult(races=[], source="parkrun", query_summary="")), \
+         patch("tools.year_round_fallback_tool.YearRoundFallbackTool.search",
+               return_value=(empty_hist, "", "")), \
          patch("services.pipeline_service.RecommendationAgent") as MockRecommenderClass:
-        
-        mock_agent_instance = MagicMock()
-        mock_agent_instance.run.return_value = (search_result, False, [], "", "")
-        MockSearchAgentClass.return_value = mock_agent_instance
 
         mock_recommender_instance = MagicMock()
         mock_recommendation = {

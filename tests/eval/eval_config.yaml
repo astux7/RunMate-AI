@@ -1,0 +1,5 @@
+# RunMate AI Evaluation Configuration
+# This file declares the metrics to run on local evaluations.
+
+metrics_to_run:
+  - final_response_quality

@@ -41,9 +41,8 @@ from rich.panel import Panel
 
 from models.runner import RunnerProfile, RunnerLevel
 from models.race import RunmateReport
-from agents.coach_agent import CoachAgent
-from agents.race_search_agent import RaceSearchAgent
-from agents.recommendation_agent import RecommendationAgent
+import asyncio
+import json
 from agents.output_agent import OutputAgent
 from tools.parkrun_local_list_tool import ParkrunLocalListTool
 from utils.retry import is_credits_depleted
@@ -178,32 +177,104 @@ def run(
         console.print(f"[red]Failed to initialise Gemini client:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
-    # ── 3. Run the agent pipeline ────────────────────────────────────────
-    try:
-        with console.status("[bold blue]🤔 Coach Agent is thinking…[/bold blue]"):
-            coach = CoachAgent()
-            coach_decision = coach.run(profile)
-
-        with console.status(
-            "[bold blue]🔍 Searching for races…[/bold blue]"
+    # Helper function to run the ADK sequential runner
+    async def run_adk_pipeline():
+        from google.adk.runners import Runner
+        from google.adk.sessions import InMemorySessionService
+        from google.genai import types
+        from agent import root_agent
+        
+        session_service = InMemorySessionService()
+        session_id = "runmate_cli_session"
+        user_id = "cli_user"
+        app_name = "app"
+        
+        session = await session_service.create_session(
+            app_name=app_name, 
+            user_id=user_id, 
+            session_id=session_id,
+            state={
+                "level": profile.level.value,
+                "location": profile.location,
+                "distance": distances_input or "",
+                "month": months_input or ""
+            }
+        )
+        
+        runner = Runner(agent=root_agent, app_name=app_name, session_service=session_service)
+        
+        # Run sequential ADK pipeline
+        async for event in runner.run_async(
+            user_id=user_id,
+            session_id=session_id,
+            new_message=types.Content(role="user", parts=[types.Part.from_text(text="run")])
         ):
-            searcher = RaceSearchAgent(
-                client=client, enable_search_grounding=enable_search
-            )
-            search_result, used_parkrun, historical_races, historical_insight, travel_tip = searcher.run(
-                profile=profile,
-                distances=coach_decision.distances,
-                months=coach_decision.months_to_search,
-            )
+            pass
+            
+        final_session = await session_service.get_session(
+            app_name=app_name, 
+            user_id=user_id, 
+            session_id=session_id
+        )
+        return final_session.state
 
-        with console.status("[bold blue]⭐ Generating recommendations…[/bold blue]"):
-            recommender = RecommendationAgent(client=client)
-            recommendations = recommender.run(
-                profile=profile,
-                coach_decision=coach_decision,
-                search_result=search_result,
-                used_parkrun_fallback=used_parkrun,
-            )
+    # ── 3. Run the ADK agent pipeline ────────────────────────────────────
+    try:
+        with console.status("[bold blue]🏃 RunMate AI agent pipeline is running…[/bold blue]"):
+            state = asyncio.run(run_adk_pipeline())
+            
+        # Reconstruct models from session state
+        from models.runner import CoachDecision
+        coach_decision = CoachDecision(
+            distances=state.get("coach_distances", []),
+            months_to_search=state.get("coach_months", []),
+            beginner_guidance=state.get("coach_guidance") or None,
+            reasoning=state.get("coach_reasoning", "")
+        )
+        
+        # Reconstruct search results
+        races_list_raw = state.get("races_found", "[]")
+        races_data = json.loads(races_list_raw)
+        from models.race import Race, RaceSearchResult, Recommendation
+        races = [Race(**r) for r in races_data]
+        search_result = RaceSearchResult(
+            found=len(races) > 0,
+            races=races,
+            source=state.get("search_source", "upcoming"),
+            query_summary=state.get("search_summary", "")
+        )
+        
+        used_parkrun = state.get("used_parkrun", False)
+        
+        # Reconstruct fallback properties
+        hist_list_raw = state.get("historical_races", "[]")
+        hist_data = json.loads(hist_list_raw)
+        historical_races = [Race(**r) for r in hist_data]
+        historical_insight = state.get("historical_insight", "")
+        travel_tip = state.get("travel_tip", "")
+        
+        # Reconstruct recommendations
+        recommendations = []
+        has_historical = len(historical_races) > 0
+        if not has_historical:
+            rec_result = state.get("recommendation_result")
+            if rec_result:
+                if isinstance(rec_result, str):
+                    rec_result = json.loads(rec_result)
+                elif hasattr(rec_result, "model_dump"):
+                    rec_result = rec_result.model_dump()
+                elif hasattr(rec_result, "dict"):
+                    rec_result = rec_result.dict()
+                
+                for item in rec_result.get("recommendations", []):
+                    race = Race(**item["race"])
+                    recommendations.append(
+                        Recommendation(
+                            race=race,
+                            rank=item["rank"],
+                            explanation=item["explanation"]
+                        )
+                    )
 
     except KeyboardInterrupt:
         console.print("\n[yellow]Cancelled.[/yellow]")

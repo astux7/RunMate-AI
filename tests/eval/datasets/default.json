@@ -1,0 +1,26 @@
+{
+  "eval_cases": [
+    {
+      "eval_case_id": "starter_leeds_5k",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "{\"level\": \"STARTER\", \"location\": \"Leeds, UK\", \"distance\": \"5K\", \"month\": \"June\"}"
+          }
+        ]
+      }
+    },
+    {
+      "eval_case_id": "runner_berlin_marathon",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "{\"level\": \"RUNNER\", \"location\": \"Berlin, Germany\", \"distance\": \"Marathon\", \"month\": \"September\"}"
+          }
+        ]
+      }
+    }
+  ]
+}

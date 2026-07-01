@@ -100,7 +100,8 @@ class ParkrunTool(BaseTool):
                 query_summary=data.get("query_summary", ""),
             )
         except Exception as exc:  # noqa: BLE001
-            import traceback, sys
+            import traceback
+            import sys
             from utils.retry import is_credits_depleted
             if is_credits_depleted(str(exc)):
                 raise  # Let billing errors surface to the top-level handler
