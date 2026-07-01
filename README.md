@@ -1,25 +1,120 @@
 # RunMate AI 🏃
 
-An AI-powered running companion that helps runners discover races appropriate to their experience level and location. Now featuring a modern local web application.
+> **Kaggle AI Agents Intensive Capstone** — An AI-powered running companion built with [Google Agent Development Kit (ADK)](https://google.github.io/adk-docs/) that helps runners discover races matched to their experience level and location.
+
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
+[![Google ADK](https://img.shields.io/badge/Google%20ADK-2.0+-green.svg)](https://google.github.io/adk-docs/)
+[![Gemini 2.5 Flash](https://img.shields.io/badge/Gemini-2.5%20Flash-orange.svg)](https://aistudio.google.com/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-teal.svg)](https://fastapi.tiangolo.com/)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+
+---
+
+## What It Does
+
+RunMate takes your **runner level** and **location** and returns personalised race recommendations — real upcoming events, ranked and explained by AI.
+
+| Input | Example |
+|---|---|
+| Level | `STARTER` or `RUNNER` |
+| Location | `Leeds, UK` |
+| Distance _(optional)_ | `5K`, `10K`, `Half Marathon`, `Marathon` |
+| Month _(optional)_ | `July`, `August` |
+
+The agent pipeline runs **three specialised ADK agents in sequence**, then presents ranked results with dates, locations, and AI-written reasoning for each pick.
+
+---
 
 ## Features
 
-- **Race Discovery** — finds official races matching your level, location, distance, and month
-- **Parkrun Fallback** — automatically searches for nearby Parkrun events when no official races are found
-- **AI Recommendations** — explains why each race suits you, with beginner-friendly guidance
-- **Multi-Agent Architecture** — Coach, Race Search, Recommendation, and Output agents work together
-- **Web Dashboard** — Interactive responsive layout with runner profile settings, search history, and live SSE progress streaming
-- **Cloud-Ready** — business logic is decoupled for both web interface and CLI usage
+- **🤖 ADK Multi-Agent Pipeline** — `CoachAgent → RaceSearchAgent → RecommendationAgent` orchestrated via `SequentialAgent`
+- **🔍 Live Race Search** — Gemini Search Grounding finds real upcoming races
+- **🌳 Parkrun Fallback** — automatically discovers free local parkruns when no races are found
+- **📅 Historical Fallback** — uses year-round data if upcoming results are sparse
+- **🌐 Web Dashboard** — interactive responsive UI with live SSE progress streaming and an event map
+- **💻 CLI Tool** — run searches straight from your terminal with rich formatted output
+- **🧪 ADK Web UI** — test agents interactively via `adk web`
+- **✅ 11 Unit Tests** — full pytest coverage of agent logic and API endpoints
+
+---
+
+## Architecture
+
+RunMate uses **Google ADK's `SequentialAgent`** to chain three custom `BaseAgent` sub-agents. Each agent reads from and writes to the ADK session state via `Event(state={...})` — the correct ADK pattern for persisting state between agents.
+
+```mermaid
+flowchart TD
+    User(["👤 User\n(Web / CLI / ADK UI)"])
+
+    subgraph ADK ["🤖 ADK SequentialAgent — runmate_pipeline"]
+        direction TB
+
+        CA["🧠 CoachAgent\n─────────────────\n• Pure Python — zero LLM calls\n• Resolves distances to search\n• Resolves months to search\n• Writes STARTER beginner guidance\n• Yields state via Event(state={…})"]
+
+        RSA["🔍 RaceSearchAgent\n─────────────────\n• Reads coach_distances, coach_months\n• Runs 3-tier search fallback chain\n• Yields races_found, historical_races\n  travel_tip, search_summary to state"]
+
+        RA["🌟 RecommendationAgent\n─────────────────\n• Reads races_found from state\n• Skips if historical races found\n• LLM ranks & explains top picks\n• Yields recommendation_result"]
+
+        CA -->|"session state\ncoach_distances\ncoach_months\ncoach_guidance"| RSA
+        RSA -->|"session state\nraces_found\nhistorical_races\ntravel_tip"| RA
+    end
+
+    subgraph Search ["🔎 Search Fallback Chain (inside RaceSearchAgent)"]
+        direction LR
+        T1["🌐 RaceSearchTool\nGoogle Grounding\n(Upcoming races)"]
+        T2["🌳 ParkrunTool\nGoogle Grounding\n(Free weekly 5Ks)"]
+        T3["📅 YearRoundFallbackTool\nHistorical race data"]
+        T1 -->|"No results?"| T2
+        T2 -->|"No results?"| T3
+    end
+
+    subgraph Output ["📤 Output Layer"]
+        WEB["🌐 Web Dashboard\nFastAPI + SSE stream\nLeaflet map + history"]
+        CLI["💻 CLI Output\nRich panels + parkrun table"]
+        ADKUI["🧪 ADK Web UI\nadk web — dev testing"]
+    end
+
+    User -->|"level, location\ndistance, month"| ADK
+    RSA <--> Search
+    RA --> Output
+    ADK -.->|"SSE progress events"| WEB
+```
+
+### Agent Responsibilities
+
+| Agent | LLM? | What it does |
+|---|---|---|
+| **CoachAgent** | ❌ Pure Python | Resolves distances & months from profile; writes STARTER guidance |
+| **RaceSearchAgent** | ✅ Gemini grounding | Searches for real races; parkrun & historical fallbacks |
+| **RecommendationAgent** | ✅ Gemini 2.5 Flash | Ranks candidates; explains why each race suits the runner |
+
+### Tools
+
+| Tool | Purpose |
+|---|---|
+| `RaceSearchTool` | Google Search grounding for upcoming official races |
+| `ParkrunTool` | Grounding-based parkrun discovery near the target location |
+| `YearRoundFallbackTool` | Historical race dates when no upcoming results found |
+| `ParkrunLocalListTool` | Returns up to 5 nearby parkruns for the map & table view |
+
+---
 
 ## Quick Start
 
-### 1. Clone and set up
+### Prerequisites
+
+- Python 3.11+
+- A free [Gemini API key](https://aistudio.google.com) — `GOOGLE_API_KEY`
+
+### 1. Clone & Install
 
 ```bash
-git clone <repo>
+git clone <repo-url>
 cd runmate-agent
+
 python -m venv .venv
-source .venv/bin/activate       # Windows: .venv\Scripts\activate
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+
 pip install -r requirements.txt
 ```
 
@@ -27,51 +122,100 @@ pip install -r requirements.txt
 
 ```bash
 cp .env.example .env
-# Edit .env and add your GOOGLE_API_KEY
+# Open .env and set your GOOGLE_API_KEY
 ```
 
-Get a free Gemini API key at [aistudio.google.com](https://aistudio.google.com).
+`.env.example` contents:
+```
+GOOGLE_API_KEY=your_key_here
+MODEL_NAME=gemini-2.5-flash
+ENABLE_SEARCH_GROUNDING=true
+SAVE_REPORTS=false
+```
 
-### 3. Run the Web Application
+---
 
-Start the FastAPI local server:
+## Running RunMate
+
+### Option A — Web Dashboard (FastAPI)
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-Open your browser at:
-[http://localhost:8000](http://localhost:8000)
+Open **[http://localhost:8000](http://localhost:8000)** — you'll see the interactive dashboard with:
+- Level selector (Starter / Runner)
+- Location search with autocomplete
+- Distance & month multi-selects
+- Live progress stream while agents run
+- Race cards with an interactive Leaflet map
+- Search history panel
 
----
+### Option B — ADK Web UI (Agent Dev Tool)
 
-### 4. Run the CLI Tool (Optional)
-
-You can also search directly from the terminal:
+Test the raw ADK agent pipeline interactively:
 
 ```bash
-# Starter runner in Leeds — will recommend 5K races and Parkruns
+adk web app/agent --port 8000
+```
+
+Open **[http://127.0.0.1:8000](http://127.0.0.1:8000)** then select **`runmate_pipeline`** from the dropdown.
+
+Send a JSON message to start the pipeline:
+
+```json
+{"level": "STARTER", "location": "Leeds, UK"}
+```
+
+```json
+{"level": "RUNNER", "location": "London, UK", "distance": "Half Marathon", "month": "August"}
+```
+
+The ADK UI shows you the full agent trace — each sub-agent's inputs, outputs, and state delta — great for debugging.
+
+### Option C — CLI Tool
+
+```bash
+# Starter runner in Leeds — recommends 5K races + local parkruns
 python runmate.py --level STARTER --location "Leeds, United Kingdom"
 
-# Experienced runner targeting a Half Marathon in October
+# Runner targeting a Half Marathon in October
 python runmate.py --level RUNNER --location "London" --distance "Half Marathon" --month "October"
 
-# Marathon runner in Berlin — searches all upcoming months
+# Runner in Berlin — searches all upcoming months
 python runmate.py --level RUNNER --location "Berlin" --distance "Marathon"
 
 # Save the report to output/
 python runmate.py --level STARTER --location "Edinburgh" --save
 ```
 
-### CLI Options
+#### CLI Options
 
-| Option | Required | Description |
-|---|---|---|
-| `--level` | ✅ | `STARTER` or `RUNNER` |
-| `--location` | ✅ | City/region, e.g. `"Leeds, United Kingdom"` |
-| `--distance` | ❌ | `5K`, `10K`, `Half Marathon`, `Marathon` (repeatable) |
-| `--month` | ❌ | Month name, e.g. `October`. Defaults to next 3 months (repeatable) |
-| `--save` | ❌ | Save the report to `output/` |
+| Option | Short | Required | Description |
+|---|---|---|---|
+| `--level` | `-l` | ✅ | `STARTER` or `RUNNER` |
+| `--location` | `-loc` | ✅ | City/region e.g. `"Leeds, UK"` |
+| `--distance` | `-d` | ❌ | `5K`, `10K`, `Half Marathon`, `Marathon` |
+| `--month` | `-m` | ❌ | Month name e.g. `October` |
+| `--save` | | ❌ | Save report to `output/` |
+| `--no-grounding` | | ❌ | Disable Google Search (offline/test mode) |
+
+---
+
+## Running Tests
+
+```bash
+pytest
+```
+
+Runs 11 tests covering:
+- Coach agent distance & month resolution
+- Race search agent fallback logic
+- Recommendation bypass when historical races found
+- FastAPI endpoint smoke tests
+- Profile model validation
+
+---
 
 ## Project Layout
 
@@ -79,115 +223,90 @@ python runmate.py --level STARTER --location "Edinburgh" --save
 runmate-agent/
 │
 ├── app/
+│   ├── agent/                      ← ADK agent package (root_agent lives here)
+│   │   ├── agent.py                   SequentialAgent pipeline definition
+│   │   ├── agents/
+│   │   │   ├── coach_agent.py         Pure-Python profile interpreter
+│   │   │   ├── race_search_agent.py   Grounding-based race search + fallbacks
+│   │   │   ├── recommendation_agent.py LLM ranker & explainer
+│   │   │   └── output_agent.py        CLI Rich panel formatter
+│   │   ├── tools/
+│   │   │   ├── race_search_tool.py    Google Search grounding tool
+│   │   │   ├── parkrun_tool.py        Parkrun grounding tool
+│   │   │   ├── year_round_fallback_tool.py  Historical fallback tool
+│   │   │   └── parkrun_local_list_tool.py   Local parkrun map/table tool
+│   │   ├── models/
+│   │   │   ├── runner.py              RunnerLevel, RunnerProfile, CoachDecision
+│   │   │   └── race.py                Race, RaceSearchResult, Recommendation
+│   │   └── prompts/                   Plain-text system prompts
+│   │
 │   ├── api/
-│   │   └── search.py           REST API router for /api/search (SSE stream)
-│   │
+│   │   └── search.py               REST API router — POST /api/search (SSE)
 │   ├── services/
-│   │   └── pipeline_service.py Asynchronous worker orchestration service
-│   │
-│   ├── agent/                  Core RunMate agent logic
-│   │   ├── agents/             Coach, RaceSearch, Recommendation, Output agents
-│   │   ├── tools/              RaceSearch, Parkrun, LocalList, Fallback tools
-│   │   ├── models/             Runner profile and race data models
-│   │   ├── utils/              Retry logic and helper methods
-│   │   └── prompts/            Plain text agent system prompts
-│   │
+│   │   └── pipeline_service.py     ADK runner orchestration service
 │   ├── templates/
-│   │   └── index.html          Main single-page HTML dashboard
-│   │
+│   │   └── index.html              Single-page web dashboard
 │   ├── static/
-│   │   ├── style.css           Custom responsive design stylesheet
-│   │   └── app.js              FastAPI SSE connection client
-│   │
-│   └── main.py                 FastAPI server entry point
+│   │   ├── style.css               Responsive dark-mode stylesheet
+│   │   └── app.js                  SSE client + Leaflet map logic
+│   ├── tests/
+│   │   └── test_pipeline.py        11 unit tests (pytest + anyio)
+│   └── main.py                     FastAPI app entry point
 │
-├── runmate.py                  CLI runner entry point
-├── .env.example                Environment variable template
-└── requirements.txt            Project dependency manifest
+├── tests/
+│   └── eval/                       ADK evaluation datasets
+│       ├── eval_config.yaml
+│       └── datasets/default.json
+│
+├── runmate.py                      CLI entry point (Typer)
+├── requirements.txt                Python dependencies
+├── .env.example                    Environment variable template
+└── pyproject.toml                  Project & pytest config
 ```
 
-## Multi-Agent Architecture
-
-RunMate AI utilizes a decoupled, orchestrator-driven multi-agent architecture designed to process runner requirements, aggregate official races, fall back to weekly community runs (parkruns) or historical events, rank recommendations, and stream intermediate progress in real-time to the web client.
-
-```mermaid
-graph TD
-    User["Client App (Web/CLI)"] -->|1. Profile| Pipe["Pipeline Service (Orchestrator)"]
-    
-    %% Coach Phase
-    Pipe -->|2. Profile| Coach["Coach Agent (Deterministic)"]
-    Coach -->|3. Scope & Advice| Pipe
-    
-    %% Search Phase
-    Pipe -->|4. Queries| Search["Race Search Agent (Orchestrator)"]
-    subgraph SearchAgent ["Search fallback Chain"]
-        Search -->|A. Live Search| RST["RaceSearchTool (Grounding)"]
-        Search -->|B. Fallback 1| PT["ParkrunTool (Grounding)"]
-        Search -->|C. Fallback 2| YRT["YearRoundFallbackTool (Historical)"]
-    end
-    RST -->|Races| Search
-    PT -->|Races| Search
-    YRT -->|Races| Search
-    Search -->|5. Results| Pipe
-    
-    %% Recommendations Phase
-    Pipe -->|6. Candidates| Recommender["Recommendation Agent (LLM)"]
-    Recommender -->|7. Ranked & Tagged| Pipe
-    
-    %% Parkrun List Tool
-    Pipe -->|8. Map & Table Locations| PLT["ParkrunLocalListTool (Capped to 5)"]
-    PLT -->|Local Parkruns| Pipe
-    
-    %% Outputs
-    Pipe -->|9. Format| Output["Output Agent (CLI)"]
-    Pipe -->|10. Save / Cache| Disk["Disk / Browser Cache"]
-    Pipe -.->|SSE Stream| User
-```
-
-### Core Agents & Orchestrators
-
-* **⚡ Pipeline Service** ([pipeline_service.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/services/pipeline_service.py)): The top-level asynchronous orchestrator coordinating agent execution, profile validation, local parkrun list loading, and real-time SSE stream events.
-* **🧠 Coach Agent** ([coach_agent.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/agents/coach_agent.py)): Pure Python / Deterministic logic. Resolves search scope, target months, defaults target distances, and compiles beginner guidance.
-* **🔍 Race Search Agent** ([race_search_agent.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/agents/race_search_agent.py)): Search orchestrator coordinating a 3-tier fallback chain (Official Upcoming → Parkrun Fallback → Year-Round Historical fallback).
-* **🌟 Recommendation Agent** ([recommendation_agent.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/agents/recommendation_agent.py)): LLM-based (`gemini-2.5-flash`). Sorts candidates, prioritizing target-city races at the top, and tags Abbott World Marathon Majors and SuperHalfs Series.
-* **📝 Output Agent** ([output_agent.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/agents/output_agent.py)): Formatter for CLI panels.
-
-### Integrated Tools
-
-* **🌐 RaceSearchTool** ([race_search_tool.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/tools/race_search_tool.py)): Google Search Grounded crawler for upcoming official race listings.
-* **🌳 ParkrunTool** ([parkrun_tool.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/tools/parkrun_tool.py)): Grounded finder for parkruns in the search area to use as a primary race-listing fallback.
-* **📅 YearRoundFallbackTool** ([year_round_fallback_tool.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/tools/year_round_fallback_tool.py)): Crawls historical/typical dates for local runs if no upcoming dates exist.
-* **🗺️ ParkrunLocalListTool** ([parkrun_local_list_tool.py](file:///Users/astux/.gemini/antigravity/scratch/runmate-agent/app/agent/tools/parkrun_local_list_tool.py)): Grounded builder returning the closest central parkruns (capped at 5) for map coordinates and local table grids.
-
-### Real-Time SSE Stream & Data Saving
-
-1. **SSE Connection:** Dashboard connects to `/api/search` via EventSource.
-2. **Progress streaming:** Yields status events as agents work (e.g. *"🏃‍♀️🏃‍♂️ Jogging around the web..."*).
-3. **Save & Cache:** Final reports are automatically saved to output files (CLI mode) or cached in the browser's `localStorage` (Web mode) for instant offline reloading.
+---
 
 ## Configuration
 
 | Variable | Default | Description |
 |---|---|---|
-| `GOOGLE_API_KEY` | — | **Required.** Gemini API key |
+| `GOOGLE_API_KEY` | — | **Required.** Your Gemini API key |
 | `MODEL_NAME` | `gemini-2.5-flash` | Gemini model to use |
-| `ENABLE_SEARCH_GROUNDING` | `true` | Use Google Search for real race data |
-| `SAVE_REPORTS` | `false` | Auto-save reports to `output/` |
+| `ENABLE_SEARCH_GROUNDING` | `true` | Use Google Search for live race data |
+| `SAVE_REPORTS` | `false` | Auto-save CLI reports to `output/` |
+
+---
+
+## How the ADK Pipeline Works
+
+1. **User sends a message** (JSON with `level`, `location`, etc.) via Web, CLI, or ADK UI
+2. **`CoachAgent`** runs first — pure Python, no API calls. It resolves which distances and months to search, and generates beginner guidance for STARTER runners. It persists results to ADK session state via `Event(state={...})`
+3. **`RaceSearchAgent`** reads from state, calls Gemini with Search Grounding to find real upcoming races. Falls back to parkrun grounding, then historical data if needed. Persists race results to state
+4. **`RecommendationAgent`** reads race results from state, calls Gemini to rank and explain the top picks. If historical races were found, it skips re-ranking and passes them through directly
+5. **Pipeline Service** reads final state and formats results for the web response or CLI output
+
+---
 
 ## Roadmap
 
-- [x] Web UI / REST API (FastAPI and JavaScript Dashboard)
-- [x] Interactive Event Map (Leaflet integration showing green/orange event markers)
-- [x] Parkrun integration (free Saturday morning 5K mapping & zero-judgment walk alerts)
-- [x] Destination race suggestions (Abbott World Marathon Majors, SuperHalfs series highlights)
+- [x] ADK `SequentialAgent` multi-agent pipeline
+- [x] Web UI / REST API (FastAPI + JavaScript Dashboard)
+- [x] Interactive Event Map (Leaflet — green/orange markers)
+- [x] Parkrun integration (free Saturday 5K mapping)
+- [x] Destination race suggestions (Abbott World Marathon Majors, SuperHalfs)
+- [x] ADK Web UI support (`adk web`)
+- [x] ADK evaluation dataset (`tests/eval/`)
 - [ ] Training plan generation
-- [ ] Strava integration
-- [ ] Garmin Connect integration
+- [ ] Strava / Garmin Connect integration
 - [ ] Weather-aware recommendations
+
+---
 
 ## Safety
 
 RunMate AI provides **informational recommendations only**. It is not a medical or coaching authority. Always consult a healthcare professional before starting a new exercise programme.
+
+---
 
 ## Licence
 
