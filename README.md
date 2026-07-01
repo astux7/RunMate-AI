@@ -1,6 +1,6 @@
 # RunMate AI 🏃
 
-> **Kaggle AI Agents Intensive Capstone** — An AI-powered running companion built with [Google Agent Development Kit (ADK)](https://google.github.io/adk-docs/) that helps runners discover races matched to their experience level and location.
+> An AI-powered running companion built with [Google Agent Development Kit (ADK)](https://google.github.io/adk-docs/) that helps runners discover races matched to their experience level and location.
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![Google ADK](https://img.shields.io/badge/Google%20ADK-2.0+-green.svg)](https://google.github.io/adk-docs/)
